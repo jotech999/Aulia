@@ -31,6 +31,7 @@ async function usuarioConMembresia(email: string) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true, // requerido detrás del proxy de Render/Nginx
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [

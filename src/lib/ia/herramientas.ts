@@ -1,0 +1,463 @@
+import type Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { calcularResumen, type EstadoAsistencia } from "@/lib/asistencia";
+import {
+  calcularPromedio,
+  promedioGeneral,
+  NOTA_APROBACION,
+  type ItemPromedio,
+} from "@/lib/calificaciones";
+import { evaluarRiesgo, ordenPorRiesgo } from "@/lib/riesgo";
+import {
+  alcanceCursos,
+  alcanceCursosRiesgo,
+  alcanceEstudiantes,
+  type UsuarioIA,
+} from "./alcance";
+import { nombreCurso } from "@/lib/cursos";
+
+/**
+ * Herramientas del asistente de IA. TODAS son de solo lectura, reautorizan el
+ * alcance del usuario en el servidor y devuelven campos con lista blanca
+ * explícita: nunca `fichaSalud`, `rut`, fecha de nacimiento, contacto ni datos
+ * de convivencia (validado con `experto-normativa`).
+ *
+ * `ejecutarHerramienta` devuelve el resultado para el modelo y, cuando accede a
+ * datos de estudiantes, metadatos de auditoría (sin PII) para `audit_log`.
+ */
+
+export type Auditable = {
+  entidad: string;
+  entidadId: string;
+  meta: Record<string, unknown>;
+};
+
+export type ResultadoHerramienta = {
+  salida: unknown;
+  auditar?: Auditable;
+};
+
+
+/** Resuelve un curso por nivel+letra dentro del alcance del usuario (año más reciente). */
+async function resolverCurso(
+  user: UsuarioIA,
+  nivel: string,
+  letra: string,
+  scope = alcanceCursos(user)
+) {
+  return prisma.curso.findFirst({
+    where: { AND: [scope, { nivel, letra }] },
+    select: { id: true, nivel: true, letra: true },
+    orderBy: { anioEscolar: { anio: "desc" } },
+  });
+}
+
+// ── Definiciones expuestas al modelo ──────────────────────────────────────
+
+export const HERRAMIENTAS: Anthropic.Tool[] = [
+  {
+    name: "listar_cursos",
+    description:
+      "Lista los cursos que el usuario puede consultar (nivel y letra). Úsala para saber qué cursos existen antes de pedir un resumen o alertas.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "buscar_estudiantes",
+    description:
+      "Busca estudiantes por nombre o apellido dentro del alcance del usuario. Devuelve nombre y curso. Úsala cuando el usuario menciona a un estudiante por su nombre.",
+    input_schema: {
+      type: "object",
+      properties: {
+        consulta: { type: "string", description: "Texto a buscar en nombre o apellido." },
+      },
+      required: ["consulta"],
+    },
+  },
+  {
+    name: "resumen_asistencia_curso",
+    description:
+      "Resumen AGREGADO de asistencia de un curso (porcentaje, presentes, ausentes, días con registro). No incluye nombres. Úsala para preguntas sobre asistencia de un curso.",
+    input_schema: {
+      type: "object",
+      properties: {
+        nivel: { type: "string", description: "Nivel del curso, p. ej. 8B, 1M." },
+        letra: { type: "string", description: "Letra del curso, p. ej. A." },
+      },
+      required: ["nivel", "letra"],
+    },
+  },
+  {
+    name: "alertas_curso",
+    description:
+      "Estudiantes de un curso con riesgo de repitencia/deserción (asistencia, notas, anotaciones). Solo disponible para gestión y profesor jefe. Incluye nombre y nivel de riesgo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        nivel: { type: "string" },
+        letra: { type: "string" },
+      },
+      required: ["nivel", "letra"],
+    },
+  },
+  {
+    name: "estudiantes_de_curso",
+    description:
+      "Lista los estudiantes con matrícula activa de un curso (nombre). Úsala para saber quiénes componen un curso dentro del alcance del usuario.",
+    input_schema: {
+      type: "object",
+      properties: {
+        nivel: { type: "string" },
+        letra: { type: "string" },
+      },
+      required: ["nivel", "letra"],
+    },
+  },
+  {
+    name: "ficha_estudiante",
+    description:
+      "Ficha académica mínima de un estudiante (curso, % de asistencia, promedio general, nº de anotaciones negativas). No incluye datos de salud, RUT ni contacto. Requiere el id obtenido de buscar_estudiantes.",
+    input_schema: {
+      type: "object",
+      properties: {
+        estudianteId: { type: "string", description: "Id del estudiante (de buscar_estudiantes)." },
+      },
+      required: ["estudianteId"],
+    },
+  },
+];
+
+// ── Ejecución (servidor) ──────────────────────────────────────────────────
+
+export async function ejecutarHerramienta(
+  user: UsuarioIA,
+  nombre: string,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  switch (nombre) {
+    case "listar_cursos":
+      return listarCursos(user);
+    case "buscar_estudiantes":
+      return buscarEstudiantes(user, entrada);
+    case "resumen_asistencia_curso":
+      return resumenAsistenciaCurso(user, entrada);
+    case "alertas_curso":
+      return alertasCurso(user, entrada);
+    case "estudiantes_de_curso":
+      return estudiantesDeCurso(user, entrada);
+    case "ficha_estudiante":
+      return fichaEstudiante(user, entrada);
+    default:
+      return { salida: { error: `Herramienta desconocida: ${nombre}` } };
+  }
+}
+
+async function listarCursos(user: UsuarioIA): Promise<ResultadoHerramienta> {
+  const cursos = await prisma.curso.findMany({
+    where: alcanceCursos(user),
+    select: { nivel: true, letra: true },
+    orderBy: [{ nivel: "asc" }, { letra: "asc" }],
+    take: 100,
+  });
+  return { salida: { cursos: cursos.map(nombreCurso) } };
+}
+
+async function buscarEstudiantes(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { consulta } = z.object({ consulta: z.string().min(1).max(80) }).parse(entrada);
+  const términos = consulta.trim().split(/\s+/).slice(0, 4);
+
+  const estudiantes = await prisma.estudiante.findMany({
+    where: {
+      AND: [
+        alcanceEstudiantes(user),
+        {
+          AND: términos.map((t) => ({
+            OR: [
+              { nombres: { contains: t, mode: "insensitive" as const } },
+              { apellidos: { contains: t, mode: "insensitive" as const } },
+            ],
+          })),
+        },
+      ],
+    },
+    // Lista blanca: sin rut, sin fichaSalud, sin fechaNacimiento.
+    select: {
+      id: true,
+      nombres: true,
+      apellidos: true,
+      matriculas: {
+        where: { estado: "ACTIVA" },
+        select: { curso: { select: { nivel: true, letra: true } } },
+        take: 1,
+      },
+    },
+    take: 15,
+  });
+
+  const resultado = estudiantes.map((e) => ({
+    id: e.id,
+    nombre: `${e.apellidos}, ${e.nombres}`,
+    curso: e.matriculas[0] ? nombreCurso(e.matriculas[0].curso) : "sin curso activo",
+  }));
+
+  return {
+    salida: { estudiantes: resultado, total: resultado.length },
+    auditar: {
+      entidad: "Estudiante",
+      entidadId: resultado.map((r) => r.id).join(",") || "-",
+      meta: { herramienta: "buscar_estudiantes", encontrados: resultado.length },
+    },
+  };
+}
+
+async function resumenAsistenciaCurso(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { nivel, letra } = z
+    .object({ nivel: z.string().min(1).max(4), letra: z.string().min(1).max(2) })
+    .parse(entrada);
+
+  const curso = await resolverCurso(user, nivel, letra);
+  if (!curso) return { salida: { error: "No tienes acceso a ese curso o no existe." } };
+
+  const matriculas = await prisma.matricula.findMany({
+    where: { cursoId: curso.id, colegioId: user.colegioId, estado: "ACTIVA" },
+    select: { estudianteId: true },
+  });
+  const ids = matriculas.map((m) => m.estudianteId);
+
+  const asistencias = await prisma.asistenciaDiaria.findMany({
+    where: { colegioId: user.colegioId, estudianteId: { in: ids } },
+    select: { estado: true },
+  });
+  const estados = asistencias.map((a) => a.estado as EstadoAsistencia);
+  const resumen = calcularResumen(estados);
+  const distribucion = { PRESENTE: 0, ATRASADO: 0, RETIRADO: 0, AUSENTE: 0 };
+  for (const e of estados) distribucion[e]++;
+
+  return {
+    salida: {
+      curso: nombreCurso(curso),
+      totalEstudiantes: ids.length,
+      porcentajeAsistencia: resumen.porcentaje,
+      diasConRegistro: resumen.diasConRegistro,
+      presentes: distribucion.PRESENTE,
+      atrasados: distribucion.ATRASADO,
+      retirados: distribucion.RETIRADO,
+      ausentes: distribucion.AUSENTE,
+    },
+    auditar: {
+      entidad: "Curso",
+      entidadId: curso.id,
+      meta: { herramienta: "resumen_asistencia_curso" },
+    },
+  };
+}
+
+async function alertasCurso(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { nivel, letra } = z
+    .object({ nivel: z.string().min(1).max(4), letra: z.string().min(1).max(2) })
+    .parse(entrada);
+
+  const scope = alcanceCursosRiesgo(user);
+  if (!scope) {
+    return { salida: { error: "Tu rol no tiene acceso al panel de alertas de riesgo." } };
+  }
+  const curso = await resolverCurso(user, nivel, letra, scope);
+  if (!curso) return { salida: { error: "No tienes acceso a ese curso o no existe." } };
+
+  const matriculas = await prisma.matricula.findMany({
+    where: { cursoId: curso.id, colegioId: user.colegioId, estado: "ACTIVA" },
+    select: { estudiante: { select: { id: true, nombres: true, apellidos: true } } },
+  });
+  const estudiantes = matriculas.map((m) => m.estudiante);
+  const ids = estudiantes.map((e) => e.id);
+
+  const [asistencias, asignaturas, anotaciones] = await Promise.all([
+    prisma.asistenciaDiaria.findMany({
+      where: { colegioId: user.colegioId, estudianteId: { in: ids } },
+      select: { estudianteId: true, estado: true },
+    }),
+    prisma.asignatura.findMany({
+      where: { cursoId: curso.id, colegioId: user.colegioId },
+      select: {
+        evaluaciones: {
+          where: { eliminadaEn: null, tipo: "SUMATIVA" },
+          select: {
+            ponderacion: true,
+            calificaciones: {
+              where: { estudianteId: { in: ids }, eliminadaEn: null },
+              select: { estudianteId: true, nota: true, eximida: true },
+            },
+          },
+        },
+      },
+    }),
+    prisma.anotacion.groupBy({
+      by: ["estudianteId"],
+      where: {
+        colegioId: user.colegioId,
+        estudianteId: { in: ids },
+        tipo: "NEGATIVA",
+        eliminadaEn: null,
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const estadosPorEst = new Map<string, EstadoAsistencia[]>();
+  for (const a of asistencias) {
+    const arr = estadosPorEst.get(a.estudianteId) ?? [];
+    arr.push(a.estado as EstadoAsistencia);
+    estadosPorEst.set(a.estudianteId, arr);
+  }
+  const negativasPorEst = new Map(anotaciones.map((g) => [g.estudianteId, g._count._all]));
+
+  const filas = estudiantes
+    .map((e) => {
+      const resumen = calcularResumen(estadosPorEst.get(e.id) ?? []);
+      const finales: number[] = [];
+      let reprobadas = 0;
+      let conNota = 0;
+      for (const asig of asignaturas) {
+        const items: ItemPromedio[] = asig.evaluaciones.map((ev) => {
+          const cal = ev.calificaciones.find((c) => c.estudianteId === e.id);
+          return {
+            nota: cal?.eximida ? null : cal?.nota ?? null,
+            ponderacion: ev.ponderacion,
+            computa: !cal?.eximida,
+          };
+        });
+        const prom = calcularPromedio(items).promedio;
+        if (prom !== null) {
+          conNota++;
+          finales.push(prom);
+          if (prom < NOTA_APROBACION) reprobadas++;
+        }
+      }
+      const riesgo = evaluarRiesgo({
+        porcentajeAsistencia: resumen.porcentaje,
+        diasConRegistro: resumen.diasConRegistro,
+        asignaturasReprobadas: reprobadas,
+        asignaturasConNota: conNota,
+        promedioGeneral: promedioGeneral(finales),
+        anotacionesNegativas: negativasPorEst.get(e.id) ?? 0,
+      });
+      return { nombre: `${e.apellidos}, ${e.nombres}`, riesgo };
+    })
+    .sort((a, b) => ordenPorRiesgo(a.riesgo, b.riesgo));
+
+  return {
+    salida: {
+      curso: nombreCurso(curso),
+      estudiantes: filas.map((f) => ({
+        nombre: f.nombre,
+        riesgo: f.riesgo.nivel,
+        factores: f.riesgo.factores.map((x) => x.etiqueta),
+      })),
+    },
+    auditar: {
+      entidad: "Curso",
+      entidadId: curso.id,
+      meta: { herramienta: "alertas_curso", estudiantes: filas.length },
+    },
+  };
+}
+
+async function estudiantesDeCurso(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { nivel, letra } = z
+    .object({ nivel: z.string().min(1).max(4), letra: z.string().min(1).max(2) })
+    .parse(entrada);
+
+  const curso = await resolverCurso(user, nivel, letra);
+  if (!curso) return { salida: { error: "No tienes acceso a ese curso o no existe." } };
+
+  const matriculas = await prisma.matricula.findMany({
+    where: { cursoId: curso.id, colegioId: user.colegioId, estado: "ACTIVA" },
+    // Lista blanca: solo nombre, sin rut/salud/fecha.
+    select: { estudiante: { select: { id: true, nombres: true, apellidos: true } } },
+    orderBy: { estudiante: { apellidos: "asc" } },
+  });
+
+  const estudiantes = matriculas.map((m) => ({
+    id: m.estudiante.id,
+    nombre: `${m.estudiante.apellidos}, ${m.estudiante.nombres}`,
+  }));
+
+  return {
+    salida: { curso: nombreCurso(curso), estudiantes, total: estudiantes.length },
+    auditar: {
+      entidad: "Curso",
+      entidadId: curso.id,
+      meta: { herramienta: "estudiantes_de_curso", total: estudiantes.length },
+    },
+  };
+}
+
+async function fichaEstudiante(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { estudianteId } = z.object({ estudianteId: z.string().min(1).max(40) }).parse(entrada);
+
+  // Reautorización: el estudiante debe estar dentro del alcance del usuario.
+  const estudiante = await prisma.estudiante.findFirst({
+    where: { AND: [{ id: estudianteId }, alcanceEstudiantes(user)] },
+    select: {
+      id: true,
+      nombres: true,
+      apellidos: true,
+      matriculas: {
+        where: { estado: "ACTIVA" },
+        select: { curso: { select: { nivel: true, letra: true } } },
+        take: 1,
+      },
+    },
+  });
+  if (!estudiante) {
+    return { salida: { error: "No tienes acceso a ese estudiante o no existe." } };
+  }
+
+  const [asistencias, anotacionesNeg] = await Promise.all([
+    prisma.asistenciaDiaria.findMany({
+      where: { colegioId: user.colegioId, estudianteId },
+      select: { estado: true },
+    }),
+    prisma.anotacion.count({
+      where: {
+        colegioId: user.colegioId,
+        estudianteId,
+        tipo: "NEGATIVA",
+        eliminadaEn: null,
+      },
+    }),
+  ]);
+  const resumen = calcularResumen(asistencias.map((a) => a.estado as EstadoAsistencia));
+
+  return {
+    salida: {
+      nombre: `${estudiante.apellidos}, ${estudiante.nombres}`,
+      curso: estudiante.matriculas[0]
+        ? nombreCurso(estudiante.matriculas[0].curso)
+        : "sin curso activo",
+      porcentajeAsistencia: resumen.porcentaje,
+      diasConRegistro: resumen.diasConRegistro,
+      anotacionesNegativas: anotacionesNeg,
+    },
+    auditar: {
+      entidad: "Estudiante",
+      entidadId: estudiante.id,
+      meta: { herramienta: "ficha_estudiante" },
+    },
+  };
+}

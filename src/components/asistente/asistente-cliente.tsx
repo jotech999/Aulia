@@ -1,0 +1,257 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+type Mensaje = { rol: "user" | "assistant"; texto: string };
+
+const SUGERENCIAS: Record<string, string[]> = {
+  PROFESOR: [
+    "Resume la asistencia de mi curso",
+    "¿Qué estudiantes tienen inasistencia crítica?",
+    "Ayúdame a redactar un comunicado para apoderados",
+  ],
+  PROFESOR_JEFE: [
+    "¿Qué estudiantes de mi jefatura están en riesgo?",
+    "Resume la asistencia de mi curso",
+    "Busca a un estudiante por su apellido",
+  ],
+  ADMIN: [
+    "¿Qué cursos tienen más alertas de riesgo?",
+    "Resume la asistencia de un curso",
+    "Busca a un estudiante",
+  ],
+  DIRECTOR: [
+    "¿Qué cursos requieren atención?",
+    "Resumen de asistencia por curso",
+    "Estudiantes en riesgo de un curso",
+  ],
+  UTP: [
+    "Alertas de riesgo de un curso",
+    "Resumen de asistencia de un curso",
+    "Busca a un estudiante",
+  ],
+  INSPECTOR: [
+    "Busca a un estudiante por su nombre",
+    "Resume la asistencia de un curso",
+    "Lista los cursos disponibles",
+  ],
+  APODERADO: [
+    "¿Cómo va la asistencia de mi pupilo?",
+    "¿Mi pupilo tiene alguna alerta?",
+    "¿En qué curso está mi pupilo?",
+  ],
+};
+
+function IconoIA({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3l1.6 4.2L18 8.8l-4.4 1.6L12 15l-1.6-4.6L6 8.8l4.4-1.6L12 3Z"
+        fill="currentColor"
+      />
+      <path d="M18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" fill="currentColor" opacity=".6" />
+    </svg>
+  );
+}
+
+export function Asistente({
+  rol,
+  nombre,
+}: {
+  rol: string;
+  nombre?: string | null;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const [entrada, setEntrada] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const finRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const sugerencias = SUGERENCIAS[rol] ?? SUGERENCIAS.PROFESOR;
+
+  useEffect(() => {
+    finRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [mensajes, cargando]);
+
+  useEffect(() => {
+    if (abierto) inputRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setAbierto(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [abierto]);
+
+  async function enviar(texto: string) {
+    const limpio = texto.trim();
+    if (!limpio || cargando) return;
+    setError(null);
+    const nuevos: Mensaje[] = [...mensajes, { rol: "user", texto: limpio }];
+    setMensajes(nuevos);
+    setEntrada("");
+    setCargando(true);
+    try {
+      const res = await fetch("/api/asistente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mensajes: nuevos.slice(-20) }),
+      });
+      if (!res.ok) {
+        const cuerpo = await res.json().catch(() => ({}));
+        throw new Error(cuerpo.error ?? "No se pudo obtener respuesta.");
+      }
+      const data = await res.json();
+      setMensajes((m) => [...m, { rol: "assistant", texto: data.respuesta }]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ocurrió un error.");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <>
+      {/* Lanzador flotante */}
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-label="Abrir asistente de IA"
+        aria-expanded={abierto}
+        className="encabezado-cine fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-flotante transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-marca-300"
+      >
+        <IconoIA />
+        <span className="hidden sm:inline">Asistente</span>
+      </button>
+
+      {/* Panel */}
+      {abierto && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-tinta/20 backdrop-blur-[1px] md:bg-transparent md:backdrop-blur-0"
+            onClick={() => setAbierto(false)}
+            aria-hidden
+          />
+          <aside
+            role="dialog"
+            aria-label="Asistente de IA"
+            className="animar-surgir fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col rounded-t-2xl border border-borde bg-superficie shadow-flotante md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:rounded-none md:rounded-l-2xl"
+          >
+            {/* Encabezado */}
+            <header className="encabezado-cine flex items-center justify-between rounded-t-2xl px-5 py-4 md:rounded-none md:rounded-tl-2xl">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+                  <IconoIA />
+                </span>
+                <div>
+                  <p className="font-display text-sm font-bold text-white">Asistente Aulia</p>
+                  <p className="text-xs text-white/70">Consulta y borradores</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAbierto(false)}
+                aria-label="Cerrar"
+                className="rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                </svg>
+              </button>
+            </header>
+
+            {/* Mensajes */}
+            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+              {mensajes.length === 0 && (
+                <div>
+                  <p className="text-sm text-tinta-suave">
+                    Hola{nombre ? `, ${nombre.split(" ")[0]}` : ""}. Puedo ayudarte a
+                    consultar asistencia, alertas y estudiantes, o a redactar borradores.
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    {sugerencias.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => enviar(s)}
+                        className="block w-full rounded-lg border border-borde bg-superficie-2 px-3 py-2 text-left text-sm text-tinta-suave transition-colors hover:border-borde-fuerte hover:text-tinta"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {mensajes.map((m, i) => (
+                <div key={i} className={m.rol === "user" ? "flex justify-end" : "flex justify-start"}>
+                  <div
+                    className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm ${
+                      m.rol === "user"
+                        ? "bg-marca-600 text-white"
+                        : "border border-borde bg-superficie-2 text-tinta"
+                    }`}
+                  >
+                    {m.texto}
+                  </div>
+                </div>
+              ))}
+
+              {cargando && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-borde bg-superficie-2 px-3.5 py-3">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-tinta-tenue [animation-delay:-0.2s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-tinta-tenue [animation-delay:-0.1s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-tinta-tenue" />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <p role="alert" className="rounded-lg border border-peligro/20 bg-peligro-suave px-3 py-2 text-sm text-peligro">
+                  {error}
+                </p>
+              )}
+              <div ref={finRef} />
+            </div>
+
+            {/* Entrada + disclaimer */}
+            <div className="border-t border-borde px-4 py-3">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  enviar(entrada);
+                }}
+                className="flex items-end gap-2"
+              >
+                <input
+                  ref={inputRef}
+                  value={entrada}
+                  onChange={(e) => setEntrada(e.target.value)}
+                  placeholder="Escribe tu consulta…"
+                  maxLength={2000}
+                  className="min-w-0 flex-1 rounded-lg border border-borde-fuerte bg-superficie px-3 py-2.5 text-sm transition focus:border-marca-500 focus:outline-none focus:ring-2 focus:ring-marca-200"
+                />
+                <button
+                  type="submit"
+                  disabled={cargando || !entrada.trim()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-marca-600 text-white transition-colors hover:bg-marca-700 disabled:opacity-40"
+                  aria-label="Enviar"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </form>
+              <p className="mt-2 text-[11px] leading-snug text-tinta-tenue">
+                Respuestas generadas por IA: pueden contener errores. Verifica en el libro de
+                clases antes de decidir. El asistente no registra datos; solo consulta y redacta borradores.
+              </p>
+            </div>
+          </aside>
+        </>
+      )}
+    </>
+  );
+}

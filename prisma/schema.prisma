@@ -1,0 +1,1808 @@
+// EduChile — esquema multi-tenant (toda tabla escolar lleva colegioId)
+// Reglas: ver CLAUDE.md. Cambios de esquema pasan por el subagente arquitecto-datos.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────────────
+
+enum Rol {
+  ADMIN
+  DIRECTOR
+  UTP
+  PROFESOR_JEFE
+  PROFESOR
+  INSPECTOR
+  APODERADO
+  PIE // Programa de Integración Escolar — accede a fichas y sesiones PIE (dato máximo sensible)
+  SOSTENEDOR // Dueño/administrador de una red de colegios: panel comparativo de SOLO LECTURA entre sus colegios (nunca escribe en el libro de clases)
+  ESTUDIANTE // Portal personal de solo lectura; acceso ligado explícitamente a un Estudiante del mismo colegio
+}
+
+enum Regimen {
+  SEMESTRAL
+  TRIMESTRAL
+}
+
+enum EstadoMatricula {
+  ACTIVA
+  RETIRADA
+}
+
+enum CalidadApoderado {
+  TITULAR
+  SUPLENTE
+  SIN_CONFIRMAR
+}
+
+enum EstadoAsistencia {
+  PRESENTE
+  AUSENTE
+  ATRASADO
+  RETIRADO // "retirado durante la jornada": el estudiante asistió y luego se retiró.
+  // OJO: NO confundir con el "Retirado" de SIGE (baja de matrícula) → ese es EstadoMatricula.RETIRADA.
+}
+
+enum TipoAnotacion {
+  POSITIVA
+  NEGATIVA
+  NEUTRA
+}
+
+enum TipoPlanificacion {
+  ANUAL
+  UNIDAD
+  CLASE
+}
+
+enum EstadoClasePlan {
+  PLANIFICADA // por defecto para clases con fecha asignada
+  REALIZADA // marcada por el profesor; la evidencia legal es la clase firmada
+  REPROGRAMADA // movida a otra fecha (feriado, suspensión puntual)
+  SUSPENDIDA // no se dará (paro, emergencia) — no cuenta como cobertura
+}
+
+enum TipoCertificado {
+  ALUMNO_REGULAR
+  NOTAS_PARCIALES
+  INFORME_SEMESTRAL
+  INFORME_ANUAL
+}
+
+enum AlcanceComunicado {
+  COLEGIO
+  NIVEL
+  CURSO
+  ESTUDIANTE
+  SELECCION
+}
+
+enum EstadoJustificacion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  ANULADA
+}
+
+enum EstadoComunicado {
+  BORRADOR
+  PROGRAMADO
+  PUBLICANDO
+  PUBLICADO
+  CANCELADO
+  FALLIDO
+}
+
+enum EstadoHorarioVersion {
+  BORRADOR
+  PUBLICADO
+  ARCHIVADO
+}
+
+enum EstadoOperacionIdempotente {
+  PROCESANDO
+  APLICADA
+  RECHAZADA
+}
+
+enum EstadoOnboarding {
+  NO_INICIADO
+  EN_PROGRESO
+  COMPLETADO
+}
+
+enum PasoOnboarding {
+  DATOS_COLEGIO
+  ANIO_ESCOLAR
+  CURSOS
+  EQUIPO
+  ESTUDIANTES
+  HORARIO
+  FINAL
+}
+
+enum TipoSolicitudTitular {
+  ACCESO
+  RECTIFICACION
+  SUPRESION
+  OPOSICION
+  PORTABILIDAD
+  BLOQUEO
+}
+
+enum EstadoSolicitudTitular {
+  RECIBIDA
+  VERIFICANDO_IDENTIDAD
+  EN_PROCESO
+  RESPONDIDA
+  RECHAZADA
+  CANCELADA
+}
+
+enum EstadoExportacionEde {
+  BORRADOR
+  GENERANDO
+  CON_ERRORES
+  LISTA_PARA_VALIDAR
+  VALIDADA
+  EXPORTADA
+}
+
+enum EstadoTrabajoOutbox {
+  PENDIENTE
+  PROCESANDO
+  COMPLETADO
+  FALLIDO
+}
+
+enum EstadoCaso {
+  ABIERTO
+  EN_SEGUIMIENTO
+  CERRADO
+}
+
+enum TipoSeguimiento {
+  ENTREVISTA
+  DESCARGOS // derecho a ser oído del estudiante/apoderado (debido proceso, Ley 21.809)
+  LLAMADA
+  DERIVACION
+  ACUERDO
+  MEDIDA // medida formativa o disciplinaria (con fundamento/proporcionalidad)
+  NOTIFICACION_APODERADO
+  NOTA
+}
+
+enum TipoEvento {
+  GENERAL // acto, actividad, información general
+  REUNION // reunión de apoderados, consejo de profesores
+  EVALUACION // prueba, entrega, disertación
+  EFEMERIDE // fiestas patrias, día del alumno, feriados escolares
+  SUSPENSION // suspensión de clases / interferiado
+}
+
+// ── Tenant y usuarios ────────────────────────────────────────────────
+
+model Colegio {
+  id                        String   @id @default(cuid())
+  rbd                       String?  @unique // Rol Base de Datos del establecimiento (Mineduc); requerido para emitir certificados
+  nombre                    String
+  creadoEn                  DateTime @default(now())
+  // Membrete configurable para documentos oficiales (certificados)
+  direccion                 String?
+  comuna                    String?
+  telefono                  String?
+  email                     String?
+  logoUrl                   String?
+  // Identidad visual del colegio en la interfaz (hex "#7442d2"); null = tema Aulia (lila)
+  colorMarca                String?
+  directorNombre            String?
+  directorCargo             String? // "Director(a)", "Secretaría"...
+  // Aviso automático a apoderados al publicar calificaciones (configurable, ON por defecto)
+  notifsApoderadoHabilitada Boolean  @default(true)
+  // Opt-in: muestra al equipo docente del curso un indicador DISCRETO de que un
+  // estudiante participa en PIE (solo el hecho, nunca el diagnóstico). OFF por
+  // defecto (Ley 21.719 / Decreto 170: minimización + finalidad pedagógica).
+  indicadorPieDocentes      Boolean  @default(false)
+
+  membresias              Membresia[]
+  aniosEscolares          AnioEscolar[]
+  cursos                  Curso[]
+  estudiantes             Estudiante[]
+  asignaturas             Asignatura[]
+  certificados            Certificado[]
+  auditLogs               AuditLog[]
+  notificaciones          Notificacion[]
+  entrevistas             Entrevista[]
+  fichasPie               FichaPie[]
+  sesionesPie             SesionPie[]
+  feriados                Feriado[]
+  reunionesApoderados     ReunionApoderados[]
+  asistentesReunion       AsistenteReunionApoderados[]
+  eventos                 EventoEscolar[]
+  rubricas                Rubrica[]
+  criteriosRubrica        CriterioRubrica[]
+  nivelesRubrica          NivelCriterio[]
+  aplicacionesRubrica     AplicacionRubrica[]
+  puntajesRubrica         PuntajeCriterioRubrica[]
+  rubricasOa              RubricaOa[]
+  bloquesHorario          BloqueHorario[]
+  horariosCurso           HorarioCurso[]
+  operacionesIdempotentes OperacionIdempotente[]
+  onboardings             OnboardingColegio[]
+  solicitudesTitular      SolicitudTitular[]
+  exportacionesEde        ExportacionEde[]
+  artefactosEde           ArtefactoExportacionEde[]
+  accesosEstudiante       AccesoEstudiante[]
+  trabajosOutbox          TrabajoOutbox[]
+  eventosSolicitudTitular EventoSolicitudTitular[]
+  verificacionesSistema   VerificacionSistema[]
+  materialesDocentes      MaterialDocente[]
+  postulaciones           Postulacion[]
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  rut          String   @unique // normalizado: 12345678-9
+  nombre       String
+  email        String   @unique
+  passwordHash String
+  activo       Boolean  @default(true)
+  creadoEn     DateTime @default(now())
+
+  membresias                  Membresia[]
+  cursosJefatura              Curso[]                      @relation("ProfesorJefe")
+  asignaturas                 Asignatura[]                 @relation("Docente")
+  apoderadoDe                 Apoderado[]
+  auditLogs                   AuditLog[]
+  notificaciones              Notificacion[]
+  accesosEstudiante           AccesoEstudiante[]           @relation("UsuarioPortalEstudiante")
+  fichasPieCreadas            FichaPie[]                   @relation("FichaPieCreadaPor")
+  fichasPieEditadas           FichaPie[]                   @relation("FichaPieActualizadaPor")
+  fichasPieEliminadas         FichaPie[]                   @relation("FichaPieEliminadaPor")
+  sesionesPie                 SesionPie[]                  @relation("SesionPieAutor")
+  sesionesPieEliminadas       SesionPie[]                  @relation("SesionPieEliminadaPor")
+  reunionesCreadas            ReunionApoderados[]          @relation("ReunionApoderadosCreadaPor")
+  reunionesEditadas           ReunionApoderados[]          @relation("ReunionApoderadosActualizadaPor")
+  reunionesEliminadas         ReunionApoderados[]          @relation("ReunionApoderadosEliminadaPor")
+  asistentesReunionEliminados AsistenteReunionApoderados[] @relation("AsistenteReunionEliminadoPor")
+  clasesPlanificacionCopiadas ClaseRegistrada[]            @relation("ClasePlanificacionCopiadaPor")
+}
+
+model Membresia {
+  id         String    @id @default(cuid())
+  usuarioId  String
+  colegioId  String
+  rol        Rol
+  activa     Boolean   @default(true)
+  creadaEn   DateTime  @default(now())
+  revocadaEn DateTime?
+
+  usuario                 Usuario                @relation(fields: [usuarioId], references: [id])
+  colegio                 Colegio                @relation(fields: [colegioId], references: [id])
+  operacionesIdempotentes OperacionIdempotente[]
+
+  @@unique([usuarioId, colegioId, rol])
+  @@index([colegioId])
+  @@index([usuarioId, activa])
+  @@index([colegioId, rol, activa])
+}
+
+// ── Estructura académica ─────────────────────────────────────────────
+
+model AnioEscolar {
+  id        String  @id @default(cuid())
+  colegioId String
+  anio      Int
+  regimen   Regimen @default(SEMESTRAL)
+
+  colegio          Colegio          @relation(fields: [colegioId], references: [id])
+  cursos           Curso[]
+  exportacionesEde ExportacionEde[]
+
+  @@unique([colegioId, anio])
+}
+
+model Curso {
+  id             String  @id @default(cuid())
+  colegioId      String
+  anioEscolarId  String
+  nivel          String // NT1, NT2, 1B..8B, 1M..4M
+  letra          String // A, B, C...
+  profesorJefeId String?
+
+  colegio             Colegio             @relation(fields: [colegioId], references: [id])
+  anioEscolar         AnioEscolar         @relation(fields: [anioEscolarId], references: [id])
+  profesorJefe        Usuario?            @relation("ProfesorJefe", fields: [profesorJefeId], references: [id])
+  matriculas          Matricula[]
+  asignaturas         Asignatura[]
+  eventos             EventoEscolar[]
+  horarios            HorarioCurso[]
+  reunionesApoderados ReunionApoderados[]
+
+  @@unique([anioEscolarId, nivel, letra])
+  @@unique([colegioId, id])
+  @@index([colegioId])
+}
+
+/// Evento del calendario escolar: reuniones, evaluaciones, efemérides, etc.
+/// De todo el colegio (cursoId = null) o de un curso específico.
+model EventoEscolar {
+  id          String     @id @default(cuid())
+  colegioId   String
+  cursoId     String? // null = evento de todo el colegio
+  titulo      String
+  descripcion String?
+  fecha       DateTime   @db.Date // día calendario chileno (medianoche UTC)
+  tipo        TipoEvento @default(GENERAL)
+  creadoPorId String
+  creadoEn    DateTime   @default(now())
+  // Soft delete (nunca DELETE físico): mantiene trazabilidad
+  eliminadaEn DateTime?
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  curso   Curso?  @relation(fields: [cursoId], references: [id])
+
+  @@index([colegioId, fecha])
+}
+
+/// Feriado legal (tabla configurable con seed). `colegioId` null = feriado
+/// nacional (aplica a todos los colegios); con `colegioId` = feriado local o
+/// regional del establecimiento. Se usa para excluir días hábiles en el cierre
+/// mensual SIGE. Reemplaza la dependencia rígida de la constante FERIADOS_CL.
+model Feriado {
+  id            String   @id @default(cuid())
+  colegioId     String? // null = nacional; set = local/regional
+  fecha         DateTime @db.Date
+  nombre        String
+  irrenunciable Boolean  @default(false)
+  creadoEn      DateTime @default(now())
+
+  colegio Colegio? @relation(fields: [colegioId], references: [id], onDelete: Cascade)
+
+  @@unique([colegioId, fecha])
+  @@index([fecha])
+}
+
+model Estudiante {
+  id                String    @id @default(cuid())
+  colegioId         String
+  rut               String // normalizado: 12345678-9
+  nombres           String
+  apellidos         String
+  fechaNacimiento   DateTime? @db.Date
+  // Datos sensibles (salud): AES-256-GCM. Se conserva el nombre físico de la
+  // columna para no destruir datos durante la transición, pero el dominio solo
+  // expone el valor como texto cifrado.
+  fichaSaludCifrada String?   @map("fichaSalud")
+  creadoEn          DateTime  @default(now())
+
+  colegio             Colegio                        @relation(fields: [colegioId], references: [id])
+  matriculas          Matricula[]
+  apoderados          Apoderado[]
+  asistencias         AsistenciaDiaria[]
+  calificaciones      Calificacion[]
+  anotaciones         Anotacion[]
+  certificados        Certificado[]
+  casosConvivencia    CasoConvivencia[]
+  entrevistas         Entrevista[]
+  fichaPie            FichaPie?
+  cuotas              Cuota[]
+  justificaciones     JustificacionInasistencia[]
+  mensajes            MensajeDirecto[]
+  accesosPortal       AccesoEstudiante[]
+  objetivosComunicado ComunicadoObjetivoEstudiante[]
+  aplicacionesRubrica AplicacionRubrica[]
+  asistenciasBloque   AsistenciaBloque[]
+  asistentesReunion   AsistenteReunionApoderados[]
+
+  @@unique([colegioId, rut])
+  @@unique([colegioId, id])
+  @@index([colegioId])
+}
+
+/// Mensaje 1-a-1 entre el apoderado de un estudiante y el profesor jefe de su
+/// curso, distinto de los comunicados masivos. El hilo se identifica por el
+/// estudiante; `deApoderado` marca de qué lado viene. Datos sensibles fuera (Ley 21.719).
+model MensajeDirecto {
+  id           String    @id @default(cuid())
+  colegioId    String
+  estudianteId String
+  autorId      String // usuario que lo envía (apoderado o profesor)
+  deApoderado  Boolean // true = lo envió el apoderado; false = el docente
+  cuerpo       String
+  leidoEn      DateTime? // cuándo lo leyó la contraparte
+  creadoEn     DateTime  @default(now())
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@index([colegioId, estudianteId])
+  @@index([estudianteId, creadoEn])
+}
+
+/// Justificación de inasistencia enviada por el apoderado desde su portal.
+/// No modifica el registro de asistencia (del profesor); es un documento que el
+/// profesor jefe puede revisar. Datos de salud fuera (Ley 21.719): solo motivo/detalle general.
+model JustificacionInasistencia {
+  id                 String              @id @default(cuid())
+  colegioId          String
+  estudianteId       String
+  asistenciaDiariaId String?             @unique
+  fecha              DateTime            @db.Date // día de la inasistencia justificada
+  motivo             String // categoría general; nunca diagnóstico
+  detalle            String?
+  estado             EstadoJustificacion @default(PENDIENTE)
+  creadaPorId        String // apoderado que la envió
+  creadaEn           DateTime            @default(now())
+  actualizadaEn      DateTime            @updatedAt
+  revisadaPorId      String?
+  revisadaEn         DateTime?
+  fundamentoRevision String?
+  anuladaPorId       String?
+  anuladaEn          DateTime?
+
+  estudiante Estudiante            @relation(fields: [estudianteId], references: [id])
+  asistencia AsistenciaDiaria?     @relation(fields: [asistenciaDiariaId], references: [id], onDelete: Restrict)
+  eventos    EventoJustificacion[]
+
+  @@index([colegioId, estudianteId])
+  @@index([colegioId, estado, fecha])
+  @@index([estudianteId, fecha])
+}
+
+/// Historial append-only del flujo de revisión. No guarda detalle médico.
+model EventoJustificacion {
+  id              String               @id @default(cuid())
+  colegioId       String
+  justificacionId String
+  estadoAnterior  EstadoJustificacion?
+  estadoNuevo     EstadoJustificacion
+  actorId         String
+  fundamento      String?
+  creadoEn        DateTime             @default(now())
+
+  justificacion JustificacionInasistencia @relation(fields: [justificacionId], references: [id], onDelete: Restrict)
+
+  @@index([colegioId, justificacionId, creadoEn])
+  @@index([colegioId, estadoNuevo, creadoEn])
+}
+
+model Matricula {
+  id           String          @id @default(cuid())
+  colegioId    String
+  estudianteId String
+  cursoId      String
+  fecha        DateTime        @db.Date
+  estado       EstadoMatricula @default(ACTIVA)
+  // Soft delete normativo: nunca borrar físicamente (Circular 30)
+  retiradaEn   DateTime?
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  curso      Curso      @relation(fields: [cursoId], references: [id])
+
+  @@unique([estudianteId, cursoId])
+  @@index([colegioId])
+  @@index([cursoId])
+}
+
+model Apoderado {
+  id           String           @id @default(cuid())
+  usuarioId    String
+  estudianteId String
+  parentesco   String // madre, padre, tutor...
+  calidad      CalidadApoderado @default(SIN_CONFIRMAR)
+
+  usuario            Usuario                      @relation(fields: [usuarioId], references: [id])
+  estudiante         Estudiante                   @relation(fields: [estudianteId], references: [id])
+  entrevistas        Entrevista[]
+  asistenciasReunion AsistenteReunionApoderados[]
+
+  @@unique([usuarioId, estudianteId])
+  @@unique([id, estudianteId])
+  @@index([estudianteId, calidad])
+}
+
+model Asignatura {
+  id        String  @id @default(cuid())
+  colegioId String
+  cursoId   String
+  nombre    String // Lenguaje, Matemática...
+  docenteId String?
+  color     String? // Clave de paleta configurable por el colegio (ver colores-asignatura.ts); null = convención por nombre
+
+  colegio         Colegio           @relation(fields: [colegioId], references: [id])
+  curso           Curso             @relation(fields: [cursoId], references: [id])
+  docente         Usuario?          @relation("Docente", fields: [docenteId], references: [id])
+  bloques         BloqueHorario[]
+  clases          ClaseRegistrada[]
+  evaluaciones    Evaluacion[]
+  planificaciones Planificacion[]
+  rubricas        Rubrica[]
+
+  @@index([colegioId])
+  @@index([cursoId])
+}
+
+model BloqueHorario {
+  id               String    @id @default(cuid())
+  colegioId        String
+  asignaturaId     String
+  horarioVersionId String?
+  dia              Int // 1=lunes ... 5=viernes
+  horaInicio       String // "08:00"
+  horaFin          String // "08:45"
+  horaInicioMin    Int
+  horaFinMin       Int
+  eliminadaEn      DateTime?
+  eliminadaPorId   String?
+
+  colegio                  Colegio            @relation(fields: [colegioId], references: [id])
+  asignatura               Asignatura         @relation(fields: [asignaturaId], references: [id])
+  horarioVersion           HorarioVersion?    @relation(fields: [horarioVersionId], references: [id], onDelete: Restrict)
+  clases                   ClaseRegistrada[]
+  asistencias              AsistenciaBloque[]
+  asistenciasDiariasFuente AsistenciaDiaria[] @relation("AsistenciaDiariaFuenteBloque")
+  planificacionesObjetivo  Planificacion[]    @relation("PlanificacionBloqueObjetivo")
+
+  @@unique([colegioId, id])
+  @@index([colegioId, asignaturaId])
+  @@index([colegioId, horarioVersionId, dia, horaInicioMin])
+}
+
+model HorarioCurso {
+  id        String @id @default(cuid())
+  colegioId String
+  cursoId   String
+
+  colegio   Colegio          @relation(fields: [colegioId], references: [id])
+  curso     Curso            @relation(fields: [cursoId], references: [id])
+  versiones HorarioVersion[]
+
+  @@unique([colegioId, cursoId])
+  @@index([colegioId])
+}
+
+model HorarioVersion {
+  id             String               @id @default(cuid())
+  colegioId      String
+  horarioCursoId String
+  numero         Int
+  estado         EstadoHorarioVersion @default(BORRADOR)
+  vigenteDesde   DateTime             @db.Date
+  vigenteHasta   DateTime?            @db.Date
+  creadoPorId    String
+  creadoEn       DateTime             @default(now())
+  publicadoPorId String?
+  publicadoEn    DateTime?
+
+  horarioCurso HorarioCurso    @relation(fields: [horarioCursoId], references: [id], onDelete: Restrict)
+  bloques      BloqueHorario[]
+
+  @@unique([colegioId, horarioCursoId, numero])
+  @@index([colegioId, estado, vigenteDesde])
+}
+
+// ── Libro de clases (Circular N°30 — todo auditado, nada se borra) ──
+
+model ClaseRegistrada {
+  id                         String    @id @default(cuid())
+  colegioId                  String
+  asignaturaId               String
+  bloqueHorarioId            String? // clase por bloque/módulo del horario (Circular 30); null si no hay horario cargado
+  fecha                      DateTime  @db.Date
+  contenido                  String
+  oaIds                      String[]  @default([]) // códigos OA (texto por ahora; FK cuando llegue el seed de OA)
+  // Firma digital inmutable: usuario + timestamp; la certificación vive además en audit_log (FIRMAR)
+  firmadaPorId               String?
+  firmadaEn                  DateTime?
+  firmaProveedor             String? // MINEDUC cuando el verificador oficial confirme; LOCAL mientras no esté integrado
+  firmaTransaccionId         String?
+  firmaSnapshotHash          String?
+  firmaVerificadaEn          DateTime?
+  // Procedencia al copiar una planificación al leccionario. Es una instantánea:
+  // una clase firmada no cambia aunque se edite la planificación de origen.
+  planificacionOrigenId      String?
+  planificacionOrigenVersion Int?
+  planificacionSnapshotHash  String?
+  planificacionCopiadaPorId  String?
+  planificacionCopiadaEn     DateTime?
+  creadaEn                   DateTime  @default(now())
+  actualizadaEn              DateTime  @updatedAt
+  // Soft delete normativo (Circular 30): nunca DELETE físico; rectificación auditada
+  eliminadaEn                DateTime?
+  eliminadaPorId             String?
+
+  asignatura              Asignatura     @relation(fields: [asignaturaId], references: [id])
+  bloqueHorario           BloqueHorario? @relation(fields: [bloqueHorarioId], references: [id])
+  planificacionOrigen     Planificacion? @relation("ClasePlanificacionOrigen", fields: [colegioId, planificacionOrigenId], references: [colegioId, id], onDelete: Restrict)
+  planificacionCopiadaPor Usuario?       @relation("ClasePlanificacionCopiadaPor", fields: [planificacionCopiadaPorId], references: [id], onDelete: Restrict)
+
+  // Una firma por bloque impartido. NULL en bloqueHorarioId no colisiona en Postgres:
+  // la unicidad real sin bloque se refuerza en la server action.
+  @@unique([asignaturaId, fecha, bloqueHorarioId])
+  @@index([colegioId])
+  @@index([asignaturaId, fecha])
+  @@index([colegioId, planificacionOrigenId])
+}
+
+model AsistenciaDiaria {
+  id              String           @id @default(cuid())
+  colegioId       String
+  estudianteId    String
+  fecha           DateTime         @db.Date // día calendario chileno (America/Santiago), medianoche UTC
+  estado          EstadoAsistencia
+  registradoPorId String // último usuario que registró/editó; la cadena completa vive en audit_log
+  fuenteBloqueId  String? // bloque cuya segunda hora originó el estado diario
+  creadoEn        DateTime         @default(now())
+  actualizadoEn   DateTime         @updatedAt
+
+  estudiante    Estudiante                 @relation(fields: [estudianteId], references: [id])
+  justificacion JustificacionInasistencia?
+  fuenteBloque  BloqueHorario?             @relation("AsistenciaDiariaFuenteBloque", fields: [colegioId, fuenteBloqueId], references: [colegioId, id], onDelete: Restrict)
+
+  @@unique([estudianteId, fecha])
+  @@index([colegioId, fecha])
+  @@index([colegioId, fuenteBloqueId, fecha])
+}
+
+/// Asistencia por bloque/asignatura. Complementa la asistencia diaria y
+/// preserva la evidencia de cada hora sin reinterpretar registros históricos.
+model AsistenciaBloque {
+  id                String           @id @default(cuid())
+  colegioId         String
+  estudianteId      String
+  bloqueHorarioId   String
+  claseRegistradaId String?
+  fecha             DateTime         @db.Date
+  estado            EstadoAsistencia
+  registradoPorId   String
+  clientMutationId  String?
+  capturadaEn       DateTime?
+  recibidaEn        DateTime         @default(now())
+  creadaEn          DateTime         @default(now())
+  actualizadaEn     DateTime         @updatedAt
+
+  estudiante Estudiante    @relation(fields: [estudianteId], references: [id])
+  bloque     BloqueHorario @relation(fields: [bloqueHorarioId], references: [id], onDelete: Restrict)
+
+  @@unique([colegioId, estudianteId, bloqueHorarioId, fecha])
+  @@unique([colegioId, clientMutationId])
+  @@index([colegioId, fecha, bloqueHorarioId])
+  @@index([colegioId, estudianteId, fecha])
+}
+
+model Evaluacion {
+  id             String    @id @default(cuid())
+  colegioId      String
+  asignaturaId   String
+  nombre         String
+  tipo           String    @default("SUMATIVA") // SUMATIVA | FORMATIVA (la formativa no promedia)
+  ponderacion    Float     @default(1) // peso relativo (>0); el Decreto 67 no obliga a sumar 100
+  periodo        Int       @default(1) // 1..2 semestral, 1..3 trimestral (según AnioEscolar.regimen)
+  fecha          DateTime  @db.Date
+  creadaEn       DateTime  @default(now())
+  actualizadaEn  DateTime  @updatedAt
+  // Soft delete normativo (Circular 30): nunca DELETE físico
+  eliminadaEn    DateTime?
+  eliminadaPorId String?
+  // Origen quiz (evaluaciones online): idempotencia del vaciado a notas.
+  quizId         String?
+  rubricaId      String?
+
+  asignatura          Asignatura          @relation(fields: [asignaturaId], references: [id])
+  calificaciones      Calificacion[]
+  rubrica             Rubrica?            @relation(fields: [rubricaId], references: [id], onDelete: Restrict)
+  aplicacionesRubrica AplicacionRubrica[]
+
+  @@index([colegioId])
+  @@index([asignaturaId, periodo])
+  @@index([quizId])
+  @@index([colegioId, rubricaId])
+}
+
+model Calificacion {
+  id              String    @id @default(cuid())
+  colegioId       String
+  evaluacionId    String
+  estudianteId    String
+  // null = pendiente (aún sin calificar). 1.0–7.0 con un decimal (Decreto 67).
+  nota            Float?
+  // Eximido (Art. 5 Decreto 67): no entra al promedio. Invariante: si eximida, nota IS NULL
+  // (CHECK en la migración). El pendiente es la ausencia de nota sin eximición.
+  eximida         Boolean   @default(false)
+  registradoPorId String // último usuario que registró/editó; la cadena completa vive en audit_log
+  creadaEn        DateTime  @default(now())
+  actualizadaEn   DateTime  @updatedAt
+  // Soft delete normativo (Circular 30): nunca DELETE físico
+  eliminadaEn     DateTime?
+  eliminadaPorId  String?
+
+  evaluacion Evaluacion @relation(fields: [evaluacionId], references: [id])
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@unique([evaluacionId, estudianteId])
+  @@index([colegioId])
+  @@index([colegioId, estudianteId])
+}
+
+model Anotacion {
+  id             String        @id @default(cuid())
+  colegioId      String
+  estudianteId   String
+  tipo           TipoAnotacion
+  categoria      String? // convivencia, atrasos, reconocimiento... (opcional, para reportes)
+  // Registro factual del hecho (debido proceso). NO incluir datos de salud/sensibles (Ley 21.719).
+  texto          String
+  fechaHecho     DateTime?     @db.Date // fecha del hecho, distinta de creadaEn (registro)
+  autorId        String
+  creadaEn       DateTime      @default(now())
+  actualizadaEn  DateTime      @updatedAt
+  // Soft delete normativo (Circular 30): nunca DELETE físico; retención ≥5 años
+  eliminadaEn    DateTime?
+  eliminadaPorId String?
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@index([colegioId])
+  @@index([estudianteId])
+}
+
+// ── Currículum: Objetivos de Aprendizaje y planificación ────────────
+// Los OA son datos de REFERENCIA GLOBAL (bases curriculares Mineduc, iguales
+// para todos los colegios): NO llevan colegioId. Solo las planificaciones que
+// los referencian son datos escolares (multi-tenant).
+
+model Oa {
+  id          String @id @default(cuid())
+  codigo      String @unique // "MA05 OA 07" (con espacios, como en el libro de clases)
+  asignatura  String // "Matemática" | "Lenguaje y Comunicación"
+  nivel       String // "1B".."8B" (alineado a Curso.nivel)
+  numero      Int // orden dentro de nivel+asignatura
+  eje         String // "Números y operaciones", "Lectura"...
+  descripcion String
+
+  planificaciones PlanificacionOa[]
+  rubricas        RubricaOa[]
+
+  @@index([nivel, asignatura])
+}
+
+model Planificacion {
+  id             String            @id @default(cuid())
+  colegioId      String
+  asignaturaId   String
+  tipo           TipoPlanificacion
+  titulo         String
+  descripcion    String?
+  fechaInicio    DateTime?         @db.Date
+  fechaFin       DateTime?         @db.Date
+  padreId        String? // una CLASE cuelga de una UNIDAD; una UNIDAD de una ANUAL
+  autorId        String
+  esPlantilla    Boolean           @default(false)
+  origenId       String?
+  version        Int               @default(1)
+  // ── Planificación clase por clase (estilo Lirmi; solo tipo CLASE) ──
+  ordenClase      Int? // número de clase dentro de la unidad (1..N)
+  fechaClase      DateTime?        @db.Date // fecha única de la clase (distinta del rango fechaInicio/fechaFin)
+  estadoClase     EstadoClasePlan? // hint pedagógico; la evidencia legal es la ClaseRegistrada firmada
+  bloqueHorarioId String? // bloque del horario usado al auto-generar el cronograma
+  creadaEn       DateTime          @default(now())
+  actualizadaEn  DateTime          @updatedAt
+  // Soft delete: una planificación puede estar referenciada por clases firmadas
+  eliminadaEn    DateTime?
+  eliminadaPorId String?
+
+  asignatura    Asignatura               @relation(fields: [asignaturaId], references: [id])
+  padre         Planificacion?           @relation("UnidadClase", fields: [padreId], references: [id])
+  hijas         Planificacion[]          @relation("UnidadClase")
+  origen        Planificacion?           @relation("PlanificacionOrigen", fields: [origenId], references: [id], onDelete: Restrict)
+  copias        Planificacion[]          @relation("PlanificacionOrigen")
+  bloqueHorario BloqueHorario?           @relation("PlanificacionBloqueObjetivo", fields: [colegioId, bloqueHorarioId], references: [colegioId, id], onDelete: Restrict)
+  oas           PlanificacionOa[]
+  historial     PlanificacionHistorial[]
+  clasesOrigen  ClaseRegistrada[]        @relation("ClasePlanificacionOrigen")
+
+  @@unique([colegioId, id])
+  @@index([colegioId])
+  @@index([asignaturaId, tipo])
+  @@index([padreId])
+  @@index([colegioId, esPlantilla, actualizadaEn])
+  // Cronograma por unidad (tenant-first): orden y fecha se consultan por unidad
+  @@index([colegioId, padreId, ordenClase])
+  @@index([colegioId, asignaturaId, fechaClase])
+}
+
+/// Snapshot append-only antes de cada edición relevante. Permite revisar y
+/// restaurar sin alterar el registro que alimentó clases ya firmadas.
+model PlanificacionHistorial {
+  id              String    @id @default(cuid())
+  colegioId       String
+  planificacionId String
+  version         Int
+  titulo          String
+  descripcion     String?
+  fechaInicio     DateTime? @db.Date
+  fechaFin        DateTime? @db.Date
+  oaCodigos       Json
+  guardadaPorId   String
+  creadaEn        DateTime  @default(now())
+
+  planificacion Planificacion @relation(fields: [planificacionId], references: [id], onDelete: Restrict)
+
+  @@unique([colegioId, planificacionId, version])
+  @@index([colegioId, planificacionId, creadaEn])
+}
+
+// Tabla puente planificación ↔ OA. Referencia el OA por CÓDIGO (identificador
+// estable de las bases), consistente con ClaseRegistrada.oaIds (también códigos).
+model PlanificacionOa {
+  planificacionId String
+  oaCodigo        String
+
+  planificacion Planificacion @relation(fields: [planificacionId], references: [id], onDelete: Cascade)
+  oa            Oa            @relation(fields: [oaCodigo], references: [codigo])
+
+  @@id([planificacionId, oaCodigo])
+  @@index([oaCodigo])
+}
+
+// ── Certificados (documentos oficiales con folio y verificación) ────
+// Snapshot INMUTABLE: se guarda lo certificado tal como se emitió; el PDF se
+// regenera desde el snapshot, nunca recalculando datos vivos. No se borran:
+// se anulan (retención ≥5 años, Circular 30).
+
+model Certificado {
+  id                String          @id @default(cuid())
+  colegioId         String
+  estudianteId      String
+  tipo              TipoCertificado
+  folio             Int // secuencial por colegio
+  // Token aleatorio de alta entropía para la verificación pública (NO es el folio).
+  tokenVerificacion String          @unique
+  hashContenido     String // sha256 del snapshot: detecta adulteración
+  datos             Json // snapshot inmutable de lo certificado
+  anio              Int
+  periodo           Int? // para informe de notas parciales
+  emitidoPorId      String
+  emitidoEn         DateTime        @default(now())
+  vigenciaHasta     DateTime?
+  // Anulación (nunca DELETE físico)
+  anuladoEn         DateTime?
+  anuladoPorId      String?
+  motivoAnulacion   String?
+
+  colegio    Colegio    @relation(fields: [colegioId], references: [id])
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@unique([colegioId, folio])
+  @@index([colegioId])
+  @@index([estudianteId])
+}
+
+// ── Comunicación con familias ───────────────────────────────────────
+
+model Comunicado {
+  id              String            @id @default(cuid())
+  colegioId       String
+  autorId         String
+  titulo          String
+  cuerpo          String
+  alcance         AlcanceComunicado
+  // Objetivo según alcance (uno según el tipo; null para COLEGIO):
+  nivel           String? // alcance NIVEL
+  cursoId         String? // alcance CURSO
+  estudianteId    String? // alcance ESTUDIANTE
+  estado          EstadoComunicado  @default(PUBLICADO)
+  programadoPara  DateTime?
+  publicadoEn     DateTime?
+  canceladoEn     DateTime?
+  canceladoPorId  String?
+  esPlantilla     Boolean           @default(false)
+  nombrePlantilla String?
+  // Inmutable después de PUBLICADO (evidencia de haber informado a la familia).
+  creadoEn        DateTime          @default(now())
+  // Soft delete con retención ≥5 años.
+  eliminadoEn     DateTime?
+  eliminadoPorId  String?
+
+  destinatarios ComunicadoDestinatario[]
+  objetivos     ComunicadoObjetivoEstudiante[]
+
+  @@index([colegioId, creadoEn])
+  @@index([colegioId, estado, programadoPara])
+}
+
+/// Selección explícita previa a resolver el snapshot de apoderados.
+model ComunicadoObjetivoEstudiante {
+  id           String @id @default(cuid())
+  colegioId    String
+  comunicadoId String
+  estudianteId String
+
+  comunicado Comunicado @relation(fields: [comunicadoId], references: [id], onDelete: Restrict)
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id], onDelete: Restrict)
+
+  @@unique([colegioId, comunicadoId, estudianteId])
+  @@index([colegioId, estudianteId])
+}
+
+// Snapshot de destinatarios resueltos AL MOMENTO de crear el comunicado: si la
+// matrícula cambia después, el registro histórico (y el reporte de lectura) se
+// mantiene estable. Una fila por apoderado-pupilo alcanzado. `leidoEn` registra
+// la confirmación autenticada del apoderado (valor probatorio).
+model ComunicadoDestinatario {
+  id                 String    @id @default(cuid())
+  comunicadoId       String
+  colegioId          String
+  apoderadoUsuarioId String
+  estudianteId       String
+  leidoEn            DateTime?
+
+  comunicado Comunicado @relation(fields: [comunicadoId], references: [id], onDelete: Cascade)
+
+  @@unique([comunicadoId, apoderadoUsuarioId, estudianteId])
+  @@index([comunicadoId])
+  @@index([apoderadoUsuarioId, colegioId])
+}
+
+// ── Convivencia escolar (protocolos, entrevistas y seguimientos) ────
+// Datos sensibles y de debido proceso: acceso restringido al equipo de
+// convivencia. Nada se borra físicamente (soft-delete, retención ≥5 años).
+
+model CasoConvivencia {
+  id             String     @id @default(cuid())
+  colegioId      String
+  estudianteId   String
+  categoria      String // "Conflicto entre pares", "Maltrato", "Entrevista", "Derivación"...
+  titulo         String
+  descripcion    String
+  estado         EstadoCaso @default(ABIERTO)
+  responsableId  String // staff a cargo del caso
+  abiertoPorId   String
+  abiertoEn      DateTime   @default(now())
+  cerradoEn      DateTime?
+  actualizadoEn  DateTime   @updatedAt
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+
+  estudiante   Estudiante               @relation(fields: [estudianteId], references: [id])
+  seguimientos SeguimientoConvivencia[]
+
+  @@index([colegioId, estado])
+  @@index([estudianteId])
+}
+
+// Entrada del timeline del caso: entrevista, llamada, derivación, acuerdo,
+// notificación al apoderado, nota. Append-only en la práctica (evidencia).
+model SeguimientoConvivencia {
+  id        String          @id @default(cuid())
+  casoId    String
+  colegioId String
+  tipo      TipoSeguimiento
+  texto     String
+  fecha     DateTime        @db.Date // fecha del hecho/entrevista
+  autorId   String
+  creadoEn  DateTime        @default(now())
+
+  caso CasoConvivencia @relation(fields: [casoId], references: [id], onDelete: Restrict)
+
+  @@index([casoId])
+}
+
+// ── Auditoría (Circular N°30: log de toda acción, append-only) ──────
+// Nunca hacer UPDATE ni DELETE sobre esta tabla.
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  colegioId String
+  usuarioId String
+  accion    String // CREAR | MODIFICAR | ELIMINAR | FIRMAR ...
+  entidad   String // AsistenciaDiaria, Calificacion...
+  entidadId String
+  antes     Json?
+  despues   Json?
+  ts        DateTime @default(now())
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([colegioId, entidad, entidadId])
+  @@index([colegioId, ts])
+}
+
+// Notificaciones in-app dirigidas a un usuario (apoderado, docente, gestión).
+// Se generan por eventos del sistema (p. ej. nueva evaluación) para que la
+// familia se entere sin depender de un aviso manual. Datos mínimos, sin PII sensible.
+model Notificacion {
+  id             String    @id @default(cuid())
+  colegioId      String
+  usuarioId      String // destinatario
+  tipo           String // EVALUACION | COMUNICADO | ...
+  titulo         String
+  cuerpo         String?
+  enlace         String? // ruta interna, p. ej. /comunicacion
+  leidaEn        DateTime?
+  emailEnviadoEn DateTime? // traza del envío por email (Feature: aviso automático)
+  creadaEn       DateTime  @default(now())
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, leidaEn])
+  @@index([colegioId, creadaEn])
+}
+
+// Entrevista / reunión con apoderado (registro pedagógico). Dato sensible:
+// acceso solo a docentes del estudiante, dirección e inspectoría (ver lib/entrevistas).
+// Soft-delete (Circular 30): nunca DELETE físico.
+model Entrevista {
+  id              String    @id @default(cuid())
+  colegioId       String
+  estudianteId    String
+  apoderado       String // nombre del apoderado presente
+  apoderadoId     String?
+  calidadSnapshot String? // parentesco/calidad conservada al momento del acta
+  motivo          String
+  acuerdos        String?
+  compromisos     String?
+  fecha           DateTime  @db.Date // fecha de la entrevista
+  proximaCita     DateTime? @db.Date
+  autorId         String
+  creadaEn        DateTime  @default(now())
+  eliminadaEn     DateTime?
+  eliminadaPorId  String?
+
+  colegio            Colegio    @relation(fields: [colegioId], references: [id])
+  estudiante         Estudiante @relation(fields: [estudianteId], references: [id])
+  apoderadoVinculado Apoderado? @relation(fields: [apoderadoId], references: [id], onDelete: Restrict)
+
+  @@index([colegioId])
+  @@index([estudianteId])
+  @@index([colegioId, apoderadoId, fecha])
+}
+
+// ── PIE (Programa de Integración Escolar) — dato de MÁXIMA sensibilidad ──
+// Ley 21.719: acceso restringido a equipo PIE y dirección; `diagnostico` cifrado
+// en reposo (AES-256-GCM, ver lib/cifrado); toda acción auditada.
+model FichaPie {
+  id                 String    @id @default(cuid())
+  colegioId          String
+  estudianteId       String    @unique
+  // Diagnóstico CIFRADO (nunca en claro en la BD ni en logs).
+  diagnosticoCifrado String
+  apoyos             String? // apoyos y adecuaciones (texto)
+  profesionalACargo  String? // profesional responsable (nombre/rol)
+  creadaPorId        String
+  creadaEn           DateTime  @default(now())
+  actualizadaPorId   String
+  actualizadaEn      DateTime  @updatedAt
+  eliminadaEn        DateTime?
+  eliminadaPorId     String?
+
+  colegio        Colegio     @relation(fields: [colegioId], references: [id], onDelete: Restrict)
+  estudiante     Estudiante  @relation(fields: [colegioId, estudianteId], references: [colegioId, id], onDelete: Restrict)
+  creadaPor      Usuario     @relation("FichaPieCreadaPor", fields: [creadaPorId], references: [id], onDelete: Restrict)
+  actualizadaPor Usuario     @relation("FichaPieActualizadaPor", fields: [actualizadaPorId], references: [id], onDelete: Restrict)
+  eliminadaPor   Usuario?    @relation("FichaPieEliminadaPor", fields: [eliminadaPorId], references: [id], onDelete: Restrict)
+  sesiones       SesionPie[]
+
+  @@unique([colegioId, estudianteId])
+  @@unique([colegioId, id])
+  @@index([colegioId, eliminadaEn, actualizadaEn])
+}
+
+model SesionPie {
+  id             String    @id @default(cuid())
+  colegioId      String
+  fichaPieId     String
+  fecha          DateTime  @db.Date
+  asistio        Boolean   @default(true)
+  observacion    String? // registro de la sesión de apoyo
+  autorId        String
+  creadaEn       DateTime  @default(now())
+  actualizadaEn  DateTime  @updatedAt
+  eliminadaEn    DateTime?
+  eliminadaPorId String?
+
+  colegio      Colegio  @relation(fields: [colegioId], references: [id], onDelete: Restrict)
+  ficha        FichaPie @relation(fields: [colegioId, fichaPieId], references: [colegioId, id], onDelete: Restrict)
+  autor        Usuario  @relation("SesionPieAutor", fields: [autorId], references: [id], onDelete: Restrict)
+  eliminadaPor Usuario? @relation("SesionPieEliminadaPor", fields: [eliminadaPorId], references: [id], onDelete: Restrict)
+
+  @@index([colegioId, fichaPieId, fecha])
+  @@index([colegioId, eliminadaEn, fecha])
+}
+
+// ── Reuniones de apoderados por curso ───────────────────────────────────────
+// Acta histórica y auditada. Los nombres de asistentes son una instantánea del
+// día de la reunión; el vínculo opcional al estudiante evita almacenar más PII.
+model ReunionApoderados {
+  id               String    @id @default(cuid())
+  colegioId        String
+  cursoId          String
+  fecha            DateTime  @db.Date
+  horaInicio       String // HH:mm (hora local America/Santiago)
+  horaFin          String // HH:mm (hora local America/Santiago)
+  tema             String
+  objetivo         String?
+  acuerdos         String?
+  observaciones    String?
+  creadaPorId      String
+  creadaEn         DateTime  @default(now())
+  actualizadaPorId String
+  actualizadaEn    DateTime  @updatedAt
+  eliminadaEn      DateTime?
+  eliminadaPorId   String?
+
+  colegio        Colegio                      @relation(fields: [colegioId], references: [id], onDelete: Restrict)
+  curso          Curso                        @relation(fields: [colegioId, cursoId], references: [colegioId, id], onDelete: Restrict)
+  creadaPor      Usuario                      @relation("ReunionApoderadosCreadaPor", fields: [creadaPorId], references: [id], onDelete: Restrict)
+  actualizadaPor Usuario                      @relation("ReunionApoderadosActualizadaPor", fields: [actualizadaPorId], references: [id], onDelete: Restrict)
+  eliminadaPor   Usuario?                     @relation("ReunionApoderadosEliminadaPor", fields: [eliminadaPorId], references: [id], onDelete: Restrict)
+  asistentes     AsistenteReunionApoderados[]
+
+  @@unique([colegioId, id])
+  @@index([colegioId, cursoId, fecha])
+  @@index([colegioId, fecha])
+  @@index([colegioId, eliminadaEn, fecha])
+}
+
+model AsistenteReunionApoderados {
+  id             String    @id @default(cuid())
+  colegioId      String
+  reunionId      String
+  estudianteId   String?
+  apoderadoId    String?
+  nombre         String // instantánea mínima del apoderado/asistente
+  creadoEn       DateTime  @default(now())
+  eliminadoEn    DateTime?
+  eliminadoPorId String?
+
+  colegio      Colegio           @relation(fields: [colegioId], references: [id], onDelete: Restrict)
+  reunion      ReunionApoderados @relation(fields: [colegioId, reunionId], references: [colegioId, id], onDelete: Restrict)
+  estudiante   Estudiante?       @relation(fields: [colegioId, estudianteId], references: [colegioId, id], onDelete: Restrict)
+  apoderado    Apoderado?        @relation(fields: [apoderadoId, estudianteId], references: [id, estudianteId], onDelete: Restrict)
+  eliminadoPor Usuario?          @relation("AsistenteReunionEliminadoPor", fields: [eliminadoPorId], references: [id], onDelete: Restrict)
+
+  @@index([colegioId, reunionId, eliminadoEn])
+  @@index([colegioId, estudianteId])
+  @@index([colegioId, apoderadoId])
+}
+
+// ── Marketing / captación ────────────────────────────────────────────────────
+// Interesados que solicitan una demo desde la landing pública. No es dato de un
+// colegio-tenant (es pre-venta), por eso no lleva colegioId.
+model SolicitudDemo {
+  id         String   @id @default(cuid())
+  nombre     String
+  email      String
+  colegio    String?
+  telefono   String?
+  cargo      String? // director, UTP, sostenedor, profesor...
+  mensaje    String?
+  origen     String? // utm / campaña, opcional
+  creadoEn   DateTime @default(now())
+  contactado Boolean  @default(false)
+
+  @@index([creadoEn])
+}
+
+// ── Web Push (PWA) ───────────────────────────────────────────────────────────
+// Suscripción push del navegador de un usuario (apoderado). Multi-tenant por
+// colegioId. Sin relación FK a Usuario para no acoplar el modelo de sesión.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  colegioId String
+  usuarioId String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  creadaEn  DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([colegioId])
+}
+
+// ── Evaluaciones online (banco de preguntas + quizzes) ───────────────────────
+enum TipoPregunta {
+  ALTERNATIVAS
+  VF // verdadero / falso
+  RESPUESTA_CORTA
+}
+
+model Pregunta {
+  id                String       @id @default(cuid())
+  colegioId         String
+  asignaturaId      String
+  tipo              TipoPregunta
+  enunciado         String
+  oaCodigo          String? // OA asociado (opcional)
+  puntaje           Int          @default(1)
+  vfCorrecta        Boolean? // para VF: true = "Verdadero" es la correcta
+  respuestaEsperada String? // para RESPUESTA_CORTA (referencia; corrección manual)
+  autorId           String
+  creadaEn          DateTime     @default(now())
+  eliminadaEn       DateTime?
+
+  alternativas Alternativa[]
+  enQuizzes    QuizPregunta[]
+
+  @@index([colegioId])
+  @@index([asignaturaId])
+}
+
+model Alternativa {
+  id         String  @id @default(cuid())
+  preguntaId String
+  texto      String
+  correcta   Boolean @default(false)
+  orden      Int     @default(0)
+
+  pregunta Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+
+  @@index([preguntaId])
+}
+
+model Quiz {
+  id           String    @id @default(cuid())
+  colegioId    String
+  asignaturaId String
+  titulo       String
+  autorId      String
+  creadoEn     DateTime  @default(now())
+  eliminadoEn  DateTime?
+
+  preguntas  QuizPregunta[]
+  resultados ResultadoQuiz[]
+
+  @@index([colegioId])
+  @@index([asignaturaId])
+}
+
+model QuizPregunta {
+  id         String @id @default(cuid())
+  quizId     String
+  preguntaId String
+  orden      Int    @default(0)
+
+  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  pregunta Pregunta @relation(fields: [preguntaId], references: [id])
+
+  @@unique([quizId, preguntaId])
+  @@index([quizId])
+}
+
+model ResultadoQuiz {
+  id           String   @id @default(cuid())
+  colegioId    String
+  quizId       String
+  estudianteId String
+  puntaje      Int
+  puntajeMax   Int
+  nota         Float
+  corregidoEn  DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, estudianteId])
+  @@index([colegioId])
+  @@index([quizId])
+}
+
+// ── Finanzas / cobranza ──────────────────────────────────────────────────────
+enum ConceptoCobro {
+  MATRICULA
+  MENSUALIDAD
+  OTRO
+}
+
+enum EstadoCuota {
+  PENDIENTE
+  PAGADA
+  VENCIDA
+  ANULADA
+}
+
+enum MedioPago {
+  EFECTIVO
+  TRANSFERENCIA
+  WEBPAY
+  KHIPU
+  TARJETA
+  OTRO
+}
+
+enum EstadoPago {
+  INICIADO
+  CONFIRMADO
+  RECHAZADO
+}
+
+// Plan de cobro del colegio para un año (matrícula + arancel anual en N cuotas).
+model PlanCobro {
+  id           String   @id @default(cuid())
+  colegioId    String
+  anio         Int
+  matricula    Int // monto de matrícula (CLP)
+  arancelAnual Int // arancel anual total (CLP)
+  cuotas       Int      @default(10) // número de mensualidades
+  creadoEn     DateTime @default(now())
+
+  @@unique([colegioId, anio])
+  @@index([colegioId])
+}
+
+// Cuota de un estudiante (matrícula o mensualidad), con vencimiento y estado.
+model Cuota {
+  id           String        @id @default(cuid())
+  colegioId    String
+  estudianteId String
+  // Año escolar del plan de cobro al que pertenece la cuota. Permite operar
+  // multi-año sin que la idempotencia confunda cuotas de años distintos.
+  // @default(0) solo cubre filas heredadas (backfill); la app siempre lo setea.
+  anio         Int           @default(0)
+  concepto     ConceptoCobro
+  numero       Int           @default(1)
+  monto        Int
+  vencimiento  DateTime      @db.Date
+  estado       EstadoCuota   @default(PENDIENTE)
+  creadaEn     DateTime      @default(now())
+  // Último recordatorio de vencimiento enviado al apoderado (anti-spam: 1 por semana)
+  recordatorioEnviadoEn DateTime?
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  pagos      Pago[]
+
+  @@index([colegioId])
+  @@index([estudianteId])
+  @@index([colegioId, estudianteId, anio])
+}
+
+// Pago (manual o vía pasarela). Para Webpay: estado INICIADO → CONFIRMADO.
+model Pago {
+  id              String     @id @default(cuid())
+  colegioId       String
+  cuotaId         String?
+  estudianteId    String
+  monto           Int
+  medio           MedioPago
+  estado          EstadoPago @default(CONFIRMADO)
+  referencia      String? // token Webpay / folio transferencia
+  registradoPorId String? // null si es pago online del apoderado
+  creadoEn        DateTime   @default(now())
+
+  cuota Cuota? @relation(fields: [cuotaId], references: [id])
+
+  @@index([colegioId])
+  @@index([cuotaId])
+  @@index([estudianteId])
+}
+
+// ── Alertas tempranas: intervenciones (dupla psicosocial / UTP) ──────────────
+enum EstadoIntervencion {
+  ABIERTA
+  CERRADA
+}
+
+// Registro de una intervención sobre un estudiante en riesgo (seguimiento del
+// caso: qué se hizo, quién, y el próximo control). Dato sensible; auditado.
+model Intervencion {
+  id             String             @id @default(cuid())
+  colegioId      String
+  estudianteId   String
+  accion         String
+  responsable    String // nombre del responsable (dupla, profesor jefe, orientación)
+  fecha          DateTime           @db.Date
+  proximoControl DateTime?          @db.Date
+  estado         EstadoIntervencion @default(ABIERTA)
+  notas          String?
+  autorId        String
+  creadaEn       DateTime           @default(now())
+  eliminadaEn    DateTime?
+
+  @@index([colegioId])
+  @@index([estudianteId])
+}
+
+// ── Rúbricas y pautas de cotejo (instrumentos de evaluación reutilizables) ──
+// Banco de instrumentos por colegio. Definir un instrumento NO altera la
+// promoción (Decreto 67); cuando se aplique para calificar, la nota resultante
+// sigue pasando por Calificacion. Multi-tenant por colegioId en Rubrica; los
+// hijos (criterios/niveles) se acceden siempre vía la rúbrica (cascade).
+
+enum TipoRubrica {
+  RUBRICA // matriz: criterios × niveles de desempeño
+  PAUTA_COTEJO // lista de cotejo: criterios logrado / no logrado
+}
+
+enum EstadoRubrica {
+  BORRADOR
+  PUBLICADA
+  ARCHIVADA
+}
+
+enum EstadoAplicacionRubrica {
+  BORRADOR
+  FINALIZADA
+  ANULADA
+}
+
+model Rubrica {
+  id             String        @id @default(cuid())
+  colegioId      String
+  asignaturaId   String? // opcional: ligada a una asignatura o genérica/reutilizable
+  nombre         String
+  descripcion    String?
+  tipo           TipoRubrica   @default(RUBRICA)
+  estado         EstadoRubrica @default(BORRADOR)
+  grupoVersionId String
+  version        Int           @default(1)
+  autorId        String
+  creadaEn       DateTime      @default(now())
+  actualizadaEn  DateTime      @updatedAt
+  publicadaEn    DateTime?
+  publicadaPorId String?
+  // Soft delete (Circular 30): puede quedar referenciada por evaluaciones
+  eliminadaEn    DateTime?
+  eliminadaPorId String?
+
+  colegio      Colegio             @relation(fields: [colegioId], references: [id])
+  asignatura   Asignatura?         @relation(fields: [asignaturaId], references: [id])
+  criterios    CriterioRubrica[]
+  oas          RubricaOa[]
+  evaluaciones Evaluacion[]
+  aplicaciones AplicacionRubrica[]
+
+  @@unique([colegioId, grupoVersionId, version])
+  @@index([colegioId])
+  @@index([asignaturaId])
+}
+
+model CriterioRubrica {
+  id          String  @id @default(cuid())
+  colegioId   String
+  rubricaId   String
+  orden       Int     @default(0)
+  descripcion String // el criterio a evaluar (fila)
+  peso        Decimal @default(1) @db.Decimal(8, 2)
+  puntajeMax  Decimal @default(0) @db.Decimal(8, 2)
+
+  colegio  Colegio                  @relation(fields: [colegioId], references: [id])
+  rubrica  Rubrica                  @relation(fields: [rubricaId], references: [id], onDelete: Restrict)
+  niveles  NivelCriterio[]
+  puntajes PuntajeCriterioRubrica[]
+
+  @@unique([colegioId, rubricaId, orden])
+  @@index([colegioId, rubricaId])
+}
+
+model NivelCriterio {
+  id         String  @id @default(cuid())
+  colegioId  String
+  criterioId String
+  orden      Int     @default(0)
+  etiqueta   String // "Logrado", "Medianamente logrado", "No logrado"
+  descriptor String // desempeño esperado en ese nivel (celda)
+  puntaje    Decimal @default(0) @db.Decimal(8, 2)
+
+  colegio     Colegio                  @relation(fields: [colegioId], references: [id])
+  criterio    CriterioRubrica          @relation(fields: [criterioId], references: [id], onDelete: Restrict)
+  selecciones PuntajeCriterioRubrica[]
+
+  @@unique([colegioId, criterioId, orden])
+  @@index([colegioId, criterioId])
+}
+
+model RubricaOa {
+  colegioId String
+  rubricaId String
+  oaCodigo  String
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  rubrica Rubrica @relation(fields: [rubricaId], references: [id], onDelete: Restrict)
+  oa      Oa      @relation(fields: [oaCodigo], references: [codigo], onDelete: Restrict)
+
+  @@id([colegioId, rubricaId, oaCodigo])
+  @@index([oaCodigo])
+}
+
+model AplicacionRubrica {
+  id                String                  @id @default(cuid())
+  colegioId         String
+  evaluacionId      String
+  rubricaId         String
+  estudianteId      String
+  estado            EstadoAplicacionRubrica @default(BORRADOR)
+  puntajeTotal      Decimal?                @db.Decimal(10, 2)
+  retroalimentacion String?
+  evaluadorId       String
+  creadaEn          DateTime                @default(now())
+  actualizadaEn     DateTime                @updatedAt
+  finalizadaEn      DateTime?
+  anuladaEn         DateTime?
+  anuladaPorId      String?
+
+  colegio    Colegio                  @relation(fields: [colegioId], references: [id])
+  evaluacion Evaluacion               @relation(fields: [evaluacionId], references: [id], onDelete: Restrict)
+  rubrica    Rubrica                  @relation(fields: [rubricaId], references: [id], onDelete: Restrict)
+  estudiante Estudiante               @relation(fields: [estudianteId], references: [id], onDelete: Restrict)
+  puntajes   PuntajeCriterioRubrica[]
+
+  @@unique([colegioId, evaluacionId, estudianteId])
+  @@index([colegioId, rubricaId, estado])
+}
+
+model PuntajeCriterioRubrica {
+  id            String   @id @default(cuid())
+  colegioId     String
+  aplicacionId  String
+  criterioId    String
+  nivelId       String?
+  puntaje       Decimal  @db.Decimal(8, 2)
+  comentario    String?
+  creadaEn      DateTime @default(now())
+  actualizadaEn DateTime @updatedAt
+
+  colegio    Colegio           @relation(fields: [colegioId], references: [id])
+  aplicacion AplicacionRubrica @relation(fields: [aplicacionId], references: [id], onDelete: Restrict)
+  criterio   CriterioRubrica   @relation(fields: [criterioId], references: [id], onDelete: Restrict)
+  nivel      NivelCriterio?    @relation(fields: [nivelId], references: [id], onDelete: Restrict)
+
+  @@unique([colegioId, aplicacionId, criterioId])
+  @@index([colegioId, criterioId])
+}
+
+// ── Operación confiable, onboarding, privacidad y cumplimiento ─────────────
+
+/// Ledger mínimo para reintentos offline. El payload permanece en IndexedDB;
+/// el servidor conserva solo hash, estado y resultado no sensible.
+model OperacionIdempotente {
+  id              String                     @id @default(cuid())
+  colegioId       String
+  membresiaId     String
+  clave           String
+  tipo            String
+  payloadHash     String
+  estado          EstadoOperacionIdempotente @default(PROCESANDO)
+  resultadoMinimo Json?
+  creadaEn        DateTime                   @default(now())
+  procesadaEn     DateTime?
+  expiraEn        DateTime
+
+  colegio   Colegio   @relation(fields: [colegioId], references: [id])
+  membresia Membresia @relation(fields: [membresiaId], references: [id], onDelete: Restrict)
+
+  @@unique([colegioId, membresiaId, clave])
+  @@index([colegioId, estado, creadaEn])
+}
+
+model OnboardingColegio {
+  id            String           @id @default(cuid())
+  colegioId     String           @unique
+  versionFlujo  Int              @default(1)
+  estado        EstadoOnboarding @default(NO_INICIADO)
+  pasoActual    PasoOnboarding   @default(DATOS_COLEGIO)
+  iniciadoPorId String?
+  iniciadoEn    DateTime?
+  actualizadoEn DateTime         @updatedAt
+  completadoEn  DateTime?
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@index([colegioId, estado])
+}
+
+model SolicitudTitular {
+  id                     String                 @id @default(cuid())
+  colegioId              String
+  titularUsuarioId       String
+  estudianteId           String?
+  representanteUsuarioId String?
+  tipo                   TipoSolicitudTitular
+  estado                 EstadoSolicitudTitular @default(RECIBIDA)
+  canal                  String                 @default("PORTAL")
+  descripcion            String?
+  recibidaEn             DateTime               @default(now())
+  vencimientoEn          DateTime
+  responsableId          String?
+  resueltaEn             DateTime?
+  codigoMotivo           String?
+  respuesta              String?
+  alcance                Json?
+
+  colegio Colegio                  @relation(fields: [colegioId], references: [id])
+  eventos EventoSolicitudTitular[]
+
+  @@index([colegioId, estado, vencimientoEn])
+  @@index([colegioId, titularUsuarioId, recibidaEn])
+}
+
+/// Timeline append-only; no contiene adjuntos ni PII innecesaria.
+model EventoSolicitudTitular {
+  id             String                  @id @default(cuid())
+  colegioId      String
+  solicitudId    String
+  estadoAnterior EstadoSolicitudTitular?
+  estadoNuevo    EstadoSolicitudTitular
+  actorId        String
+  nota           String?
+  creadoEn       DateTime                @default(now())
+
+  colegio   Colegio          @relation(fields: [colegioId], references: [id])
+  solicitud SolicitudTitular @relation(fields: [solicitudId], references: [id], onDelete: Restrict)
+
+  @@index([colegioId, solicitudId, creadoEn])
+}
+
+/// Ejecución trazable del pipeline EDE. El archivo cifrado vive fuera de la BD;
+/// aquí se guardan metadatos, hashes y el resultado del validador oficial.
+model ExportacionEde {
+  id               String               @id @default(cuid())
+  colegioId        String
+  anioEscolarId    String
+  solicitadoPorId  String
+  estado           EstadoExportacionEde @default(BORRADOR)
+  versionEde       String?
+  versionCeds      String?
+  versionMapeo     String?
+  containerVersion String?
+  imageDigest      String?
+  generadoEn       DateTime?
+  validadoEn       DateTime?
+  exportadoEn      DateTime?
+  hashSha256       String?
+  tamanoBytes      BigInt?
+  conteos          Json?
+  errores          Json?
+  keyId            String?
+  cifrado          Boolean              @default(false)
+  creadaEn         DateTime             @default(now())
+
+  colegio     Colegio                   @relation(fields: [colegioId], references: [id])
+  anioEscolar AnioEscolar               @relation(fields: [anioEscolarId], references: [id], onDelete: Restrict)
+  artefactos  ArtefactoExportacionEde[]
+
+  @@index([colegioId, estado, creadaEn])
+  @@index([colegioId, anioEscolarId, versionEde])
+}
+
+model ArtefactoExportacionEde {
+  id            String   @id @default(cuid())
+  colegioId     String
+  exportacionId String
+  tipo          String
+  storageKey    String
+  hashSha256    String
+  tamanoBytes   BigInt
+  creadoEn      DateTime @default(now())
+
+  colegio     Colegio        @relation(fields: [colegioId], references: [id])
+  exportacion ExportacionEde @relation(fields: [exportacionId], references: [id], onDelete: Restrict)
+
+  @@index([colegioId, exportacionId])
+}
+
+model AccesoEstudiante {
+  id           String    @id @default(cuid())
+  colegioId    String
+  usuarioId    String
+  estudianteId String
+  activo       Boolean   @default(true)
+  creadoPorId  String
+  creadoEn     DateTime  @default(now())
+  revocadoEn   DateTime?
+
+  colegio    Colegio    @relation(fields: [colegioId], references: [id])
+  usuario    Usuario    @relation("UsuarioPortalEstudiante", fields: [usuarioId], references: [id], onDelete: Restrict)
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id], onDelete: Restrict)
+
+  @@unique([colegioId, usuarioId])
+  @@unique([colegioId, estudianteId])
+  @@index([colegioId, activo])
+}
+
+model TrabajoOutbox {
+  id                String              @id @default(cuid())
+  colegioId         String
+  tipo              String
+  claveIdempotencia String
+  agregadoId        String
+  payloadMinimo     Json?
+  estado            EstadoTrabajoOutbox @default(PENDIENTE)
+  intentos          Int                 @default(0)
+  disponibleEn      DateTime            @default(now())
+  bloqueadoEn       DateTime?
+  procesadoEn       DateTime?
+  errorCodigo       String?
+  creadoEn          DateTime            @default(now())
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@unique([colegioId, claveIdempotencia])
+  @@index([colegioId, estado, disponibleEn])
+}
+
+/// Estado verificable de respaldos, restauraciones y servicios críticos.
+model VerificacionSistema {
+  id             String   @id @default(cuid())
+  colegioId      String
+  tipo           String // RESPALDO | RESTAURACION | EDE | EMAIL | PUSH
+  estado         String // OK | ADVERTENCIA | ERROR
+  ejecutadaEn    DateTime @default(now())
+  detalle        Json?
+  ejecutadaPorId String?
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@index([colegioId, tipo, ejecutadaEn])
+}
+
+/// Estado del ciclo de admisión de una postulación.
+enum EstadoPostulacion {
+  RECIBIDA
+  EN_REVISION
+  ACEPTADA
+  RECHAZADA
+  MATRICULADA
+}
+
+/// Postulación de admisión enviada desde el formulario PÚBLICO del colegio.
+/// Contiene solo los datos mínimos para evaluar (sin RUT ni datos sensibles);
+/// el expediente completo se crea recién al matricular.
+model Postulacion {
+  id              String            @id @default(cuid())
+  colegioId       String
+  nombres         String
+  apellidos       String
+  fechaNacimiento DateTime?         @db.Date
+  nivelSolicitado String
+  apoderadoNombre String
+  email           String
+  telefono        String?
+  comentario      String?
+  estado          EstadoPostulacion @default(RECIBIDA)
+  creadaEn        DateTime          @default(now())
+  actualizadaEn   DateTime          @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@index([colegioId, estado, creadaEn])
+}
+
+/// Banco de material pedagógico del colegio: guías y evaluaciones generadas
+/// con IA (o creadas por docentes) que se comparten entre el staff del mismo
+/// colegio. `contenido` almacena el MaterialGenerado completo (sin PII: solo
+/// contenido curricular). Soft delete para poder retirar material sin perderlo.
+model MaterialDocente {
+  id           String    @id @default(cuid())
+  colegioId    String
+  autorId      String
+  tipoMaterial String // "guia" | "evaluacion"
+  titulo       String
+  asignatura   String
+  nivel        String
+  contenido    Json
+  creadoEn     DateTime  @default(now())
+  eliminadoEn  DateTime?
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@index([colegioId, creadoEn])
+}
+
+/// Rate limit compartido entre instancias. La clave es un hash irreversible
+/// del identificador; nunca se persiste el email/IP en claro.
+model LimiteAutenticacion {
+  claveHash       String    @id
+  intentos        Int       @default(0)
+  ventanaIniciaEn DateTime
+  bloqueadoHasta  DateTime?
+  actualizadoEn   DateTime  @updatedAt
+
+  @@index([bloqueadoHasta])
+}

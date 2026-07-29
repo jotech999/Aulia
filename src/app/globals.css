@@ -1,0 +1,642 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Sistema de diseño — identidad "Lila sereno"
+   Lila como color de marca (calidez académica, distinto de todo el mercado
+   escolar chileno, que es azul) + ámbar tiza como acento de foco.
+   Neutrales teñidos de violeta para que el gris no pelee con la marca.
+   80% claridad operacional · 20% expresión cinematográfica.
+
+   Accesibilidad: TODOS los pares de color en uso real fueron medidos contra
+   WCAG 2.1 AA. Los tonos marca-300 y marca-400 son decorativos: nunca usarlos
+   como texto sobre blanco (no alcanzan 4.5:1).
+   ========================================================================== */
+
+@theme {
+  /* Tipografía: Plus Jakarta Sans para display, Inter para body.
+     Inter se mantiene en el cuerpo porque sus cifras son de ancho tabular:
+     es lo que hace que la libreta de notas y las tablas de asistencia
+     queden alineadas columna por columna. */
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), "Plus Jakarta Sans", "Segoe UI", sans-serif;
+
+  /* Superficies: blanco con una insinuación de lila, no gris neutro */
+  --color-lienzo: #ffffff;
+  --color-superficie: #ffffff;
+  --color-superficie-2: #f8f7fc;
+  --color-superficie-3: #edeaf6;
+
+  /* Bordes teñidos de violeta. borde-fuerte cumple el 3:1 que WCAG 1.4.11
+     exige a los contornos de controles (el gris anterior no lo alcanzaba). */
+  --color-borde: #e5e1f0;
+  --color-borde-fuerte: #8f84ab;
+
+  /* Tinta: casi negro con base violeta.
+     tinta-tenue subió de contraste: el gris anterior daba 2,56:1 sobre blanco
+     y no cumplía para texto. Ahora 5,27:1. */
+  --color-tinta: #1a1726;
+  --color-tinta-suave: #4a4560;
+  --color-tinta-tenue: #6e6885;
+
+  /* Marca: lila. 600 es el tono de los botones (6,08:1 con texto blanco) y
+     700 el de enlaces y texto de marca (8,29:1 sobre blanco). */
+  --color-marca-50: #f6f3fe;
+  --color-marca-100: #ede7fd;
+  --color-marca-200: #dcd1fb;
+  --color-marca-300: #c3aef7;
+  --color-marca-400: #a585f0;
+  --color-marca-500: #8a5fe4;
+  --color-marca-600: #7442d2;
+  --color-marca-700: #5d33ac;
+  --color-marca-800: #4a2a88;
+  --color-marca-900: #38206a;
+
+  /* Acento: ámbar tiza. Solo para destacar sobre fondos oscuros de marca
+     (6,18:1 sobre marca-800) y para filos y degradados decorativos.
+     Nunca como texto sobre blanco. */
+  --color-acento: #ffb84d;
+
+  /* Semánticos, en tres intensidades porque un mismo color no puede servir para
+     texto y para relleno a la vez:
+       -suave  → fondo de insignias y avisos
+       (base)  → TEXTO. Oscuro, cumple 4.5:1 sobre blanco. Los tres se
+                 oscurecieron respecto de la paleta anterior, donde éxito
+                 (3,47:1) y alerta (2,15:1) no cumplían AA.
+       -vivo   → RELLENO de gráficos, barras y anillos. Cumple el 3:1 de WCAG
+                 1.4.11 para objetos gráficos, pero conserva la saturación: el
+                 tono de texto usado como relleno se ve barro, no ámbar. */
+  --color-exito: #15784f;
+  --color-exito-suave: #e3f3ea;
+  --color-exito-vivo: #1a9160;
+  --color-alerta: #8a5b06;
+  --color-alerta-suave: #fcf1d8;
+  --color-alerta-vivo: #be7d08;
+  --color-peligro: #be2f46;
+  --color-peligro-suave: #fbe8ea;
+  --color-peligro-vivo: #d93b53;
+
+  /* Radios */
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.375rem;
+
+  /* Sombras teñidas de violeta: una sombra gris sobre una interfaz lila se ve
+     sucia. Coherentes con una única fuente de luz superior. */
+  --shadow-suave: 0 1px 2px rgba(56, 32, 106, 0.05), 0 1px 3px rgba(56, 32, 106, 0.08);
+  --shadow-elevada: 0 6px 18px -6px rgba(56, 32, 106, 0.16), 0 2px 6px -2px rgba(56, 32, 106, 0.09);
+  --shadow-flotante: 0 22px 44px -12px rgba(56, 32, 106, 0.26);
+
+  /* Movimiento controlado (160–240 ms) */
+  --ease-suave: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Base ------------------------------------------------------------------- */
+
+body {
+  /* Lienzo blanco con iluminación lila muy tenue: lila arriba-derecha,
+     un toque ámbar arriba-izquierda para que no quede frío. */
+  background:
+    radial-gradient(90% 60% at 100% 0%, rgba(138, 95, 228, 0.07), transparent 60%),
+    radial-gradient(70% 50% at 0% 0%, rgba(255, 184, 77, 0.05), transparent 55%),
+    var(--color-lienzo);
+  background-attachment: fixed;
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+}
+
+/* Foco visible y coherente en toda la plataforma (accesibilidad) */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-marca-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Clases de componente en @layer components para que las utilidades de
+   Tailwind (position, bg, etc.) puedan sobrescribirlas cuando corresponda. */
+@layer components {
+  /* Superficie de tarjeta reutilizable: profundidad moderada, borde discreto */
+  .superficie {
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    box-shadow: var(--shadow-suave);
+  }
+
+  /* Tarjeta interactiva: elevación sutil al pasar el cursor (160–240 ms) */
+  .tarjeta-int {
+    transition:
+      box-shadow 0.2s var(--ease-suave),
+      border-color 0.2s var(--ease-suave),
+      transform 0.2s var(--ease-suave);
+  }
+  .tarjeta-int:hover {
+    border-color: var(--color-borde-fuerte);
+    box-shadow: var(--shadow-elevada);
+    transform: translateY(-2px);
+  }
+
+  /* Acento superior fino (lila → ámbar): firma cromática de la marca */
+  .acento-superior {
+    position: relative;
+  }
+  .acento-superior::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    border-radius: 999px 999px 0 0;
+    background: linear-gradient(90deg, var(--color-marca-500), var(--color-acento));
+  }
+
+  /* Encabezado cinematográfico — lila profundo con dos luces: una lila clara
+     arriba a la izquierda y una violeta viva arriba a la derecha.
+     El sello de la plataforma: aparece en héroes, marca y focos.
+     El texto blanco sobre este fondo queda sobre 10:1 de contraste. */
+  .encabezado-cine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      radial-gradient(120% 150% at 12% -12%, rgba(220, 209, 251, 0.22), transparent 52%),
+      radial-gradient(100% 120% at 108% 6%, rgba(165, 133, 240, 0.34), transparent 55%),
+      linear-gradient(142deg, var(--color-marca-900), var(--color-marca-700) 55%, var(--color-marca-800));
+    color: #fff;
+  }
+  .encabezado-cine::after {
+    /* Polvo de tiza: textura tenue, decorativa, difuminada hacia abajo */
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: radial-gradient(rgba(255, 253, 245, 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(180deg, #000, transparent 85%);
+  }
+
+  .animar-surgir {
+    animation: surgir 0.24s var(--ease-suave) both;
+  }
+}
+
+/* Movimiento --------------------------------------------------------------- */
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Transición al navegar entre páginas (la aplica el template del dashboard a
+   cada ruta). Fade + leve desplazamiento; el guard global de
+   prefers-reduced-motion (más abajo) la neutraliza para accesibilidad. */
+.transicion-ruta {
+  animation: transicion-ruta 0.3s var(--ease-suave) both;
+}
+
+@keyframes transicion-ruta {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tarjeta-int:hover {
+    transform: none;
+  }
+}
+
+/* Respeta reducción de movimiento en todo el sistema */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Capa premium de componentes (transversal)
+   Sistema base que heredan todas las pantallas: botones, insignias, control
+   segmentado, realce de superficie y ritmo de aparición. Sobrio por defecto,
+   con la firma cromática de la marca en los puntos focales.
+   ========================================================================== */
+
+@layer components {
+  /* --- Botones ---------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-lg);
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.18s var(--ease-suave),
+      border-color 0.18s var(--ease-suave),
+      color 0.18s var(--ease-suave),
+      box-shadow 0.18s var(--ease-suave),
+      transform 0.08s var(--ease-suave);
+  }
+  .btn:active {
+    transform: translateY(0.5px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .btn-sm {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8125rem;
+    border-radius: var(--radius-md);
+  }
+  .btn-lg {
+    padding: 0.8rem 1.35rem;
+    font-size: 0.95rem;
+  }
+
+  /* Primario: verde marca con una insinuación cálida de ámbar al pasar */
+  .btn-primario {
+    position: relative;
+    background: linear-gradient(180deg, var(--color-marca-500), var(--color-marca-600));
+    color: #fff;
+    box-shadow: var(--shadow-suave), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  .btn-primario:hover {
+    background: linear-gradient(180deg, var(--color-marca-600), var(--color-marca-700));
+    box-shadow: var(--shadow-elevada), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .btn-secundario {
+    background: var(--color-superficie);
+    color: var(--color-tinta);
+    border: 1px solid var(--color-borde-fuerte);
+  }
+  .btn-secundario:hover {
+    background: var(--color-superficie-2);
+    border-color: var(--color-tinta-tenue);
+  }
+
+  .btn-fantasma {
+    background: transparent;
+    color: var(--color-tinta-suave);
+  }
+  .btn-fantasma:hover {
+    background: var(--color-superficie-3);
+    color: var(--color-tinta);
+  }
+
+  .btn-peligro {
+    background: var(--color-peligro);
+    color: #fff;
+    box-shadow: var(--shadow-suave);
+  }
+  .btn-peligro:hover {
+    filter: brightness(0.96);
+    box-shadow: var(--shadow-elevada);
+  }
+
+  /* --- Insignias de estado --------------------------------------------- */
+  .insignia {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    border-radius: 999px;
+    padding: 0.16rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+  .insignia-neutra {
+    background: var(--color-superficie-3);
+    color: var(--color-tinta-suave);
+  }
+  .insignia-marca {
+    background: var(--color-marca-50);
+    color: var(--color-marca-700);
+  }
+  .insignia-exito {
+    background: var(--color-exito-suave);
+    color: var(--color-exito);
+  }
+  .insignia-alerta {
+    background: var(--color-alerta-suave);
+    color: var(--color-alerta);
+  }
+  .insignia-peligro {
+    background: var(--color-peligro-suave);
+    color: var(--color-peligro);
+  }
+  /* Punto delante del texto: estado también legible sin depender del color */
+  .insignia-punto::before {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  /* --- Control segmentado / pestañas ----------------------------------- */
+  .segmentado {
+    display: inline-flex;
+    gap: 0.15rem;
+    padding: 0.2rem;
+    border-radius: var(--radius-lg);
+    background: var(--color-superficie-2);
+    border: 1px solid var(--color-borde);
+  }
+  .segmentado > button,
+  .segmentado > a {
+    border-radius: calc(var(--radius-lg) - 0.2rem);
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-tinta-suave);
+    transition:
+      background-color 0.16s var(--ease-suave),
+      color 0.16s var(--ease-suave),
+      box-shadow 0.16s var(--ease-suave);
+  }
+  .segmentado > [data-activo="true"] {
+    background: var(--color-superficie);
+    color: var(--color-tinta);
+    box-shadow: var(--shadow-suave);
+  }
+
+  /* --- Realce de superficie: luz interior tenue desde arriba ------------ */
+  /* Aplica un brillo superior sutil para dar la sensación premium de
+     "iluminado desde arriba". Solo en tarjetas destacadas, nunca en tablas. */
+  .superficie-realce {
+    position: relative;
+    isolation: isolate;
+  }
+  .superficie-realce::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 42%);
+    opacity: 0.7;
+  }
+
+  /* --- Cifra de dato destacada ----------------------------------------- */
+  .cifra {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+}
+
+/* ==========================================================================
+   Acentos "futurista / académico" (sutiles, decorativos)
+   Malla tipo blueprint, dibujado de anillos y resplandor de dato. Solo en
+   zonas decorativas (héroes, medidores), nunca detrás de texto pequeño ni
+   tablas. Respetan prefers-reduced-motion.
+   ========================================================================== */
+
+@layer components {
+  /* Malla académica: retícula finísima tipo papel de cuaderno / plano.
+     Pensada para superficies decorativas oscuras (héroes). Muy tenue. */
+  .malla-academica {
+    position: relative;
+    isolation: isolate;
+  }
+  .malla-academica::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(120% 90% at 100% 0%, #000, transparent 72%);
+  }
+
+  /* Resplandor de dato: halo cálido tenue detrás de una cifra destacada
+     sobre superficie oscura (futurista, sin dañar contraste del texto). */
+  .resplandor-dato {
+    text-shadow: 0 0 22px rgba(255, 244, 214, 0.45);
+  }
+}
+
+/* Revelado al hacer scroll — CSS puro con scroll-driven animations. Progressive
+   enhancement: si el navegador no soporta animation-timeline: view(), el
+   contenido queda visible (no daña SEO ni el caso sin JS). Solo con movimiento
+   permitido. Se usa en la landing pública. */
+@keyframes revelar-entrada {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revelar-scroll {
+      animation: revelar-entrada linear both;
+      animation-timeline: view();
+      animation-range: entry 2% cover 22%;
+    }
+  }
+}
+
+/* Barra de composición: se "dibuja" de izquierda a derecha al aparecer. */
+@keyframes barra-entra {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.barra-entra {
+  transform-origin: left center;
+  animation: barra-entra 0.7s var(--ease-suave) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-entra { animation: none; }
+}
+
+/* Esqueleto con barrido de brillo (shimmer): sensación de carga más moderna
+   que un simple pulso. Respeta prefers-reduced-motion (animación desactivada
+   globalmente, queda un degradado estático inofensivo). */
+@keyframes brillo-esqueleto {
+  0% { background-position: 180% 0; }
+  100% { background-position: -80% 0; }
+}
+.esqueleto {
+  background: linear-gradient(
+    90deg,
+    var(--color-superficie-3) 25%,
+    var(--color-superficie-2) 42%,
+    var(--color-superficie-3) 60%
+  );
+  background-size: 220% 100%;
+  animation: brillo-esqueleto 1.5s ease-in-out infinite;
+}
+
+/* Dibujado de anillo (medidores radiales): la porción visible "se dibuja"
+   desde 0 hasta su valor. El offset final va inline; aquí solo el inicio. */
+@keyframes dibujar-anillo {
+  from { stroke-dashoffset: var(--anillo-circ); }
+}
+.anillo-dibujar {
+  animation: dibujar-anillo 1s var(--ease-suave) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anillo-dibujar { animation: none; }
+}
+
+/* Ritmo de aparición escalonada para rejillas de tarjetas (sutil, una vez) --- */
+.surgir-secuencia > * {
+  animation: surgir 0.26s var(--ease-suave) both;
+}
+.surgir-secuencia > *:nth-child(1) { animation-delay: 0.02s; }
+.surgir-secuencia > *:nth-child(2) { animation-delay: 0.06s; }
+.surgir-secuencia > *:nth-child(3) { animation-delay: 0.10s; }
+.surgir-secuencia > *:nth-child(4) { animation-delay: 0.14s; }
+.surgir-secuencia > *:nth-child(5) { animation-delay: 0.18s; }
+.surgir-secuencia > *:nth-child(6) { animation-delay: 0.22s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .surgir-secuencia > * {
+    animation: none;
+  }
+}
+
+/* Impresión ----------------------------------------------------------------
+   Deja solo el contenido (para imprimir/guardar como PDF el horario, el
+   leccionario, etc.). Oculta menú lateral, barras y controles no imprimibles. */
+/* ========================================================================== */
+/* MÓVIL FASE 1 — objetivos táctiles ≥44px, sin zoom involuntario, safe-areas  */
+/* ========================================================================== */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Respeta el notch y la barra de gestos del iPhone/Android */
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Dedos, no cursores: acciones y campos de formulario alcanzan 44px de alto */
+@media (pointer: coarse) {
+  #contenido .btn,
+  #contenido button[type="submit"],
+  #contenido input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  #contenido select {
+    min-height: 44px;
+  }
+  #contenido input[type="checkbox"],
+  #contenido input[type="radio"] {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+}
+
+@media (max-width: 640px) {
+  /* iOS hace zoom si el input tiene <16px: lo evitamos en pantallas chicas */
+  #contenido input,
+  #contenido select,
+  #contenido textarea {
+    font-size: 16px;
+  }
+  /* Tablas densas: un punto menos de letra y scroll con inercia */
+  #contenido table {
+    font-size: 13px;
+  }
+}
+
+/* Scroll horizontal con inercia en todos los contenedores de tablas */
+#contenido .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* ========================================================================== */
+/* INTERACTIVIDAD TRANSVERSAL — tablas, celdas y controles del libro de clases */
+/* Hace que asistencia, calificaciones, horario y leccionario se sientan vivos */
+/* ========================================================================== */
+
+/* Filas de tablas: resaltado suave al pasar el mouse (lectura por fila) */
+#contenido table tbody tr {
+  transition: background-color 0.15s ease;
+}
+#contenido table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--color-marca-50) 55%, transparent);
+}
+
+/* Inputs dentro de tablas (notas, asistencia): foco con halo azul visible */
+#contenido table input,
+#contenido table select {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+#contenido table input:focus-visible,
+#contenido table select:focus-visible {
+  border-color: var(--color-marca-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-marca-500) 18%, transparent);
+}
+#contenido table input:hover:not(:focus):not(:disabled) {
+  border-color: var(--color-borde-fuerte);
+}
+
+/* Micro-interacción universal de botones: se "hunden" levemente al presionar */
+#contenido button {
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease,
+    color 0.15s ease, border-color 0.15s ease;
+}
+#contenido button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Chips y badges clicables reaccionan al hover */
+#contenido a[class*="rounded-"]:not([class*="tarjeta"]):hover {
+  filter: brightness(0.98);
+}
+
+/* Respeta la preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  #contenido table tbody tr,
+  #contenido table input,
+  #contenido button {
+    transition: none;
+  }
+}
+
+/* ========================================================================== */
+/* Los estilos de la landing antigua (.navbar/.hero/.features/.pricing/.footer) */
+/* vivían aquí: ~445 líneas con azules escritos a mano que ya no correspondían  */
+/* a la marca. Se eliminaron junto con la landing duplicada de /inicio. La      */
+/* landing comercial usa el sistema de diseño y los tokens de este archivo.     */
+/* ========================================================================== */
+
+@media print {
+  /* Oculta solo el chrome del layout (marcado con data-noprint), no los
+     encabezados de contenido (p. ej. la cabecera de la ficha del estudiante). */
+  [data-noprint] {
+    display: none !important;
+  }
+  #contenido {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .superficie,
+  table,
+  [class*="shadow-"] {
+    box-shadow: none !important;
+  }
+  /* Evita cortar filas/tarjetas a la mitad entre páginas. */
+  tr,
+  li {
+    break-inside: avoid;
+  }
+}

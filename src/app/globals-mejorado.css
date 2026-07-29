@@ -1,0 +1,482 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Sistema de diseño EduChile — identidad "Naranjo Intenso + Blanco Nítido"
+   Naranjo vibrante (#FF6B35) + Azul profundo (#1E3A8A) para contraste
+   Superficies blancas puras; mejor legibilidad y energía visual.
+   Moderno, dinámico e interactivo (diseño actualizado).
+   ========================================================================== */
+
+@theme {
+  /* Tipografía: sans moderna para operativo + display para títulos */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display-fam), "Segoe UI", Roboto, sans-serif;
+
+  /* Superficies blancas puras y claras */
+  --color-lienzo: #ffffff;
+  --color-superficie: #ffffff;
+  --color-superficie-2: #f8f9fa;
+  --color-superficie-3: #e9ecef;
+
+  /* Bordes claros y definidos */
+  --color-borde: #dee2e6;
+  --color-borde-fuerte: #adb5bd;
+
+  /* Tinta: azul profundo para contraste y legibilidad */
+  --color-tinta: #1e3a8a;
+  --color-tinta-suave: #4b5563;
+  --color-tinta-tenue: #9ca3af;
+
+  /* Marca: naranjo intenso y vibrante (la firma energética) */
+  --color-marca-50: #fff7ed;
+  --color-marca-100: #ffedd5;
+  --color-marca-200: #fed7aa;
+  --color-marca-300: #fdba74;
+  --color-marca-400: #fb923c;
+  --color-marca-500: #ff6b35;
+  --color-marca-600: #f97316;
+  --color-marca-700: #ea580c;
+  --color-marca-800: #c2410c;
+  --color-marca-900: #92400e;
+
+  /* Acento: azul brillante para focos y detalles */
+  --color-acento: #0ea5e9;
+
+  /* Semánticos vibrantes y claros */
+  --color-exito: #10b981;
+  --color-exito-suave: #d1fae5;
+  --color-alerta: #f59e0b;
+  --color-alerta-suave: #fef3c7;
+  --color-peligro: #ef4444;
+  --color-peligro-suave: #fee2e2;
+
+  /* Radios modernos */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* Sombras modernas y claras */
+  --shadow-suave: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-elevada: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-flotante: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Movimiento más rápido y responsivo (120–200 ms) */
+  --ease-suave: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base ------------------------------------------------------------------- */
+
+body {
+  /* Fondo blanco puro con un toque de azul suave (gradiente muy sutil) */
+  background:
+    radial-gradient(120% 100% at 50% 100%, rgba(15, 165, 233, 0.03), transparent 60%),
+    var(--color-lienzo);
+  background-attachment: fixed;
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+}
+
+/* Foco visible y accesible en toda la plataforma */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-marca-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Clases de componente en @layer components */
+@layer components {
+  /* Superficie de tarjeta reutilizable: blanca, bordes claros */
+  .superficie {
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    box-shadow: var(--shadow-suave);
+  }
+
+  /* Tarjeta interactiva: elevación clara al pasar */
+  .tarjeta-int {
+    transition:
+      box-shadow 0.2s var(--ease-suave),
+      border-color 0.2s var(--ease-suave),
+      transform 0.2s var(--ease-suave);
+  }
+  .tarjeta-int:hover {
+    border-color: var(--color-borde-fuerte);
+    box-shadow: var(--shadow-elevada);
+    transform: translateY(-4px);
+  }
+
+  /* Acento superior: naranjo → azul */
+  .acento-superior {
+    position: relative;
+  }
+  .acento-superior::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    border-radius: 999px 999px 0 0;
+    background: linear-gradient(90deg, var(--color-marca-500), var(--color-acento));
+  }
+
+  /* Encabezado cinematográfico: naranjo profundo con energía */
+  .encabezado-cine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      radial-gradient(120% 150% at 12% -12%, rgba(255, 200, 150, 0.2), transparent 52%),
+      radial-gradient(100% 120% at 108% 6%, rgba(249, 115, 22, 0.3), transparent 55%),
+      linear-gradient(135deg, #ff6b35 0%, #f97316 50%, #ea580c);
+    color: #fff;
+  }
+  .encabezado-cine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    mask-image: linear-gradient(180deg, #000, transparent 85%);
+  }
+
+  .animar-surgir {
+    animation: surgir 0.3s var(--ease-suave) both;
+  }
+}
+
+/* Movimiento --------------------------------------------------------------- */
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Transición entre páginas */
+.transicion-ruta {
+  animation: transicion-ruta 0.3s var(--ease-suave) both;
+}
+
+@keyframes transicion-ruta {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tarjeta-int:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Capa premium de componentes
+   Botones, insignias, controles segmentados con la identidad energética.
+   ========================================================================== */
+
+@layer components {
+  /* --- Botones ---------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-lg);
+    padding: 0.65rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.16s var(--ease-suave),
+      border-color 0.16s var(--ease-suave),
+      color 0.16s var(--ease-suave),
+      box-shadow 0.16s var(--ease-suave),
+      transform 0.08s var(--ease-suave);
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .btn-sm {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: var(--radius-md);
+  }
+  .btn-lg {
+    padding: 0.85rem 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  /* Primario: naranjo intenso vibrante */
+  .btn-primario {
+    position: relative;
+    background: linear-gradient(135deg, var(--color-marca-500), var(--color-marca-600));
+    color: #fff;
+    box-shadow: var(--shadow-suave), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .btn-primario:hover {
+    background: linear-gradient(135deg, var(--color-marca-600), var(--color-marca-700));
+    box-shadow: var(--shadow-elevada), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secundario {
+    background: var(--color-superficie-2);
+    color: var(--color-tinta);
+    border: 1px solid var(--color-borde-fuerte);
+  }
+  .btn-secundario:hover {
+    background: var(--color-superficie-3);
+    border-color: var(--color-tinta-suave);
+  }
+
+  .btn-fantasma {
+    background: transparent;
+    color: var(--color-marca-500);
+  }
+  .btn-fantasma:hover {
+    background: var(--color-marca-50);
+    color: var(--color-marca-600);
+  }
+
+  .btn-peligro {
+    background: var(--color-peligro);
+    color: #fff;
+    box-shadow: var(--shadow-suave);
+  }
+  .btn-peligro:hover {
+    filter: brightness(0.95);
+    box-shadow: var(--shadow-elevada);
+  }
+
+  /* --- Insignias de estado --------------------------------------------- */
+  .insignia {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+  .insignia-neutra {
+    background: var(--color-superficie-3);
+    color: var(--color-tinta-suave);
+  }
+  .insignia-marca {
+    background: var(--color-marca-100);
+    color: var(--color-marca-700);
+  }
+  .insignia-exito {
+    background: var(--color-exito-suave);
+    color: var(--color-exito);
+  }
+  .insignia-alerta {
+    background: var(--color-alerta-suave);
+    color: var(--color-alerta);
+  }
+  .insignia-peligro {
+    background: var(--color-peligro-suave);
+    color: var(--color-peligro);
+  }
+
+  .insignia-punto::before {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  /* --- Control segmentado / pestañas ----------------------------------- */
+  .segmentado {
+    display: inline-flex;
+    gap: 0.15rem;
+    padding: 0.2rem;
+    border-radius: var(--radius-lg);
+    background: var(--color-superficie-2);
+    border: 1px solid var(--color-borde);
+  }
+  .segmentado > button,
+  .segmentado > a {
+    border-radius: calc(var(--radius-lg) - 0.2rem);
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-tinta-suave);
+    transition:
+      background-color 0.15s var(--ease-suave),
+      color 0.15s var(--ease-suave),
+      box-shadow 0.15s var(--ease-suave);
+  }
+  .segmentado > [data-activo="true"] {
+    background: var(--color-marca-500);
+    color: #fff;
+    box-shadow: var(--shadow-suave);
+  }
+
+  /* --- Realce de superficie: luz interior clara */
+  .superficie-realce {
+    position: relative;
+    isolation: isolate;
+  }
+  .superficie-realce::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 45%);
+    opacity: 0.8;
+  }
+
+  /* --- Cifra de dato destacada ----------------------------------------- */
+  .cifra {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+}
+
+/* ==========================================================================
+   Acentos decorativos modernos
+   ========================================================================== */
+
+@layer components {
+  /* Malla académica: retícula para superficies decorativas */
+  .malla-academica {
+    position: relative;
+    isolation: isolate;
+  }
+  .malla-academica::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 30px 30px;
+    mask-image: radial-gradient(120% 90% at 100% 0%, #000, transparent 72%);
+  }
+
+  /* Resplandor de dato: halo para cifras destacadas */
+  .resplandor-dato {
+    text-shadow: 0 0 16px rgba(255, 107, 53, 0.3);
+  }
+}
+
+/* Animaciones de scroll reveal */
+@keyframes revelar-entrada {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revelar-scroll {
+      animation: revelar-entrada linear both;
+      animation-timeline: view();
+      animation-range: entry 2% cover 22%;
+    }
+  }
+}
+
+/* Barra de composición */
+@keyframes barra-entra {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.barra-entra {
+  transform-origin: left center;
+  animation: barra-entra 0.6s var(--ease-suave) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-entra { animation: none; }
+}
+
+/* Esqueleto con shimmer */
+@keyframes brillo-esqueleto {
+  0% { background-position: 180% 0; }
+  100% { background-position: -80% 0; }
+}
+.esqueleto {
+  background: linear-gradient(
+    90deg,
+    var(--color-superficie-2) 25%,
+    var(--color-superficie-3) 42%,
+    var(--color-superficie-2) 60%
+  );
+  background-size: 220% 100%;
+  animation: brillo-esqueleto 1.2s ease-in-out infinite;
+}
+
+/* Dibujado de anillo para medidores */
+@keyframes dibujar-anillo {
+  from { stroke-dashoffset: var(--anillo-circ); }
+}
+.anillo-dibujar {
+  animation: dibujar-anillo 0.8s var(--ease-suave) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anillo-dibujar { animation: none; }
+}
+
+/* Aparición escalonada para rejillas */
+.surgir-secuencia > * {
+  animation: surgir 0.25s var(--ease-suave) both;
+}
+.surgir-secuencia > *:nth-child(1) { animation-delay: 0.02s; }
+.surgir-secuencia > *:nth-child(2) { animation-delay: 0.05s; }
+.surgir-secuencia > *:nth-child(3) { animation-delay: 0.08s; }
+.surgir-secuencia > *:nth-child(4) { animation-delay: 0.11s; }
+.surgir-secuencia > *:nth-child(5) { animation-delay: 0.14s; }
+.surgir-secuencia > *:nth-child(6) { animation-delay: 0.17s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .surgir-secuencia > * {
+    animation: none;
+  }
+}
+
+/* Impresión */
+@media print {
+  [data-noprint] {
+    display: none !important;
+  }
+  #contenido {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .superficie,
+  table,
+  [class*="shadow-"] {
+    box-shadow: none !important;
+  }
+  tr,
+  li {
+    break-inside: avoid;
+  }
+}

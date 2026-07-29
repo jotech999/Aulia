@@ -1,0 +1,788 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { Iconos, type NombreIcono } from "@/components/ui/iconos";
+import { Isotipo } from "@/components/ui/isotipo";
+import { FormularioDemo } from "@/components/landing/form-demo";
+import { CalculadoraPrecio } from "@/components/landing/calculadora-precio";
+import { PLANES, cotizar, formatearCLP, formatearUF } from "@/lib/precios";
+
+export const metadata = {
+  // `absolute` evita la plantilla "%s · Aulia" del layout: sin esto el título de
+  // la landing quedaba "... hecho para profesores · Aulia", con la marca dos veces.
+  title: { absolute: "Aulia — El libro de clases digital hecho para profesores" },
+  description:
+    "Plataforma de gestión escolar chilena: libro de clases, planificación, comunicación con apoderados y administración. Cumple Circular N°30 y Decreto 67, con IA docente y precio publicado por estudiante.",
+};
+
+const MODULOS: { icono: NombreIcono; titulo: string; desc: string }[] = [
+  { icono: "libro", titulo: "Libro de clases", desc: "Asistencia, calificaciones y firma de clases en línea, según Circular N°30. Todo auditado, nada se pierde." },
+  { icono: "planificacion", titulo: "Planificación", desc: "Planifica por unidad y clase vinculando los OA del currículum, con cobertura curricular para UTP." },
+  { icono: "comunicacion", titulo: "Comunicación", desc: "Comunicados a las familias con confirmación de lectura y un portal del apoderado claro y móvil." },
+  { icono: "cursos", titulo: "Administración", desc: "Cursos, matrícula, alertas tempranas y reportes normativos (SIGE, actas, respaldo del libro)." },
+];
+
+/**
+ * Los cuatro diferenciadores que no tienen las plataformas tradicionales chilenas.
+ * Van aparte de los módulos porque son la razón de elegirnos, no la lista de features.
+ */
+const DIFERENCIADORES: { titulo: string; desc: string }[] = [
+  {
+    titulo: "Pasa lista sin señal",
+    desc: "La asistencia se guarda en el teléfono y se sincroniza sola cuando vuelve la conexión. En el patio, en el gimnasio o en un colegio rural, la lista se toma igual.",
+  },
+  {
+    titulo: "IA docente incluida",
+    desc: "Guías, evaluaciones, informes al hogar y resúmenes para el consejo, en borrador y en segundos. Sin costo extra por plan y sin enviar datos sensibles al modelo.",
+  },
+  {
+    titulo: "Todo a dos clics (⌘K)",
+    desc: "Un buscador global donde escribes lo que quieres hacer. Nadie tiene que aprender dónde está cada cosa: se escribe y se llega.",
+  },
+  {
+    titulo: "Cumplimiento demostrable",
+    desc: "Un panel muestra, en vivo, cómo va el colegio en Circular N°30, Decreto 67 y respaldo a 5 años. Cuando llega la Superintendencia, la evidencia ya está lista.",
+  },
+];
+
+/** Ejemplos de cotización que se muestran junto a la calculadora. */
+const EJEMPLOS_MATRICULA = [250, 600, 1100, 1800];
+
+const PREGUNTAS: { q: string; a: string }[] = [
+  {
+    q: "¿Cuánto demora migrar desde Lirmi, Napsis o Syscol?",
+    a: "La migración es asistida y sin costo. En la semana 0 importamos cursos, estudiantes y matrícula desde tu sistema actual con plantillas CSV/Excel validadas; tú revisas y confirmas. Puedes correr en paralelo con tu plataforma anterior durante la marcha blanca, sin cortes.",
+  },
+  {
+    q: "¿Cumple la normativa chilena?",
+    a: "Sí, de fábrica: libro de clases según Circular N°30 (con registro de toda acción y respaldo 5 años), evaluación y promoción según Decreto 67/2018, y exportaciones compatibles con SIGE para declarar asistencia y matrícula.",
+  },
+  {
+    q: "¿Qué pasa con los datos de los estudiantes?",
+    a: "Se tratan como datos sensibles (Ley 21.719): minimización de datos, campos de salud cifrados y aislamiento estricto entre colegios. El asistente de IA nunca recibe RUT ni datos sensibles — opera solo lectura sobre datos no identificables.",
+  },
+  {
+    q: "¿Necesita una capacitación larga para el equipo?",
+    a: "No. El diseño es tan directo que la capacitación es corta por definición: una sesión a dirección/UTP y otra a la sala de profesores, más acompañamiento en la primera toma de asistencia y el primer cierre de notas.",
+  },
+  {
+    q: "¿Funciona bien en el celular?",
+    a: "Sí. Tomar asistencia y poner notas se hace desde el teléfono con una interfaz pensada para móvil, no una versión reducida del escritorio. Los apoderados tienen su portal móvil con notas, asistencia y avisos.",
+  },
+  {
+    q: "¿Y si ya pagué el año en otra plataforma?",
+    a: "Puedes empezar con la prueba gratis de 60 días y la migración sin costo, corriendo en paralelo. Al cambiarte, congelamos tu precio por 2 años para protegerte del reajuste de la UF.",
+  },
+  {
+    q: "¿Por qué el precio va por estudiante y no una tarifa plana?",
+    a: "Porque es lo justo en las dos direcciones: un colegio de 150 estudiantes no debería pagar lo mismo que uno de 1.500. Los tramos son marginales — el descuento por volumen se aplica solo sobre los estudiantes de cada tramo — así que el precio total nunca da saltos. La calculadora de esta página muestra el cálculo completo.",
+  },
+  {
+    q: "¿Qué incluye el precio y qué se cobra aparte?",
+    a: "El precio incluye usuarios ilimitados, implementación, capacitación, migración desde tu plataforma actual, soporte y todas las actualizaciones del año. No hay cargo de puesta en marcha ni cobro por usuario adicional. Los valores son netos, sin IVA, y se facturan una vez al año en UF.",
+  },
+  {
+    q: "Somos un colegio municipal o SLEP: ¿cómo se compra?",
+    a: "Entregamos la ficha técnica, el certificado de cumplimiento de Circular N°30 y la cotización en UF que el DAEM o el SLEP necesita para una Compra Ágil o una licitación L1. Estamos inscritos para operar por Mercado Público y podemos cotizar por establecimiento o por la comuna completa.",
+  },
+];
+
+const COMPARATIVA: { criterio: string; tradicional: string; aulia: string }[] = [
+  { criterio: "Velocidad", tradicional: "Pantallas lentas, muchos clics", aulia: "Cada acción en 2 clics o por el buscador ⌘K" },
+  { criterio: "Experiencia", tradicional: "Diseño anticuado y confuso", aulia: "Interfaz moderna, pensada para el profesor" },
+  { criterio: "Móvil", tradicional: "Apenas usable en el teléfono", aulia: "Toma de asistencia y notas desde el celular" },
+  { criterio: "Sin conexión", tradicional: "Si se cae internet, no hay lista", aulia: "La asistencia se guarda y sincroniza sola" },
+  { criterio: "Inteligencia artificial", tradicional: "Módulo aparte o no existe", aulia: "IA docente incluida en el plan, sin costo extra" },
+  { criterio: "Apoderados", tradicional: "Sin visibilidad o app aparte", aulia: "Portal claro con notas, asistencia y avisos" },
+  { criterio: "Precio", tradicional: "\"Contáctenos\" y cotización a puerta cerrada", aulia: "Publicado, con calculadora en el sitio" },
+];
+
+function Marca() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Isotipo className="h-9 w-9" />
+      <span className="font-display text-lg font-bold tracking-tight text-tinta">Aulia</span>
+    </div>
+  );
+}
+
+/**
+ * Vista previa del producto para el héroe: una recreación fiel y ligera del
+ * panel de dirección con los tokens reales del sistema. Autocontenida (sin
+ * imágenes), decorativa (aria-hidden), para transmitir de un vistazo cómo se
+ * ve la plataforma sin cargar capturas pesadas.
+ */
+function VistaPrevia() {
+  const barras = [62, 74, 68, 83, 79, 91, 88, 96];
+  return (
+    <div className="animar-surgir hidden lg:block" aria-hidden>
+      <div className="superficie rotate-[0.6deg] rounded-2xl p-4 shadow-flotante ring-1 ring-black/5">
+        {/* Barra de ventana */}
+        <div className="flex items-center gap-2 border-b border-borde pb-3">
+          <Isotipo className="h-6 w-6" />
+          <span className="text-xs font-semibold text-tinta">Panel · Dirección</span>
+          <span className="ml-auto flex gap-1">
+            <span className="h-2 w-2 rounded-full bg-borde-fuerte" />
+            <span className="h-2 w-2 rounded-full bg-borde-fuerte" />
+            <span className="h-2 w-2 rounded-full bg-borde-fuerte" />
+          </span>
+        </div>
+
+        {/* KPIs */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="acento-superior rounded-xl border border-borde bg-superficie-2 p-3">
+            <p className="text-[10px] font-medium text-tinta-tenue">Asistencia hoy</p>
+            <p className="cifra mt-0.5 text-xl text-tinta">96,5%</p>
+            <p className="text-[10px] font-semibold text-exito">▲ +1,2 pts</p>
+          </div>
+          <div className="rounded-xl border border-borde bg-superficie-2 p-3">
+            <p className="text-[10px] font-medium text-tinta-tenue">Promedio</p>
+            <p className="cifra mt-0.5 text-xl text-tinta">5,8</p>
+          </div>
+          <div className="rounded-xl border border-borde bg-superficie-2 p-3">
+            <p className="text-[10px] font-medium text-tinta-tenue">Alertas</p>
+            <p className="cifra mt-0.5 text-xl text-peligro">3</p>
+          </div>
+        </div>
+
+        {/* Mini gráfico de barras */}
+        <div className="mt-3 rounded-xl border border-borde bg-superficie-2 p-3">
+          <p className="text-[10px] font-medium text-tinta-tenue">Evolución de la asistencia</p>
+          <div className="mt-2 flex h-16 items-end gap-1.5">
+            {barras.map((h, i) => (
+              <span
+                key={i}
+                className="flex-1 rounded-t bg-gradient-to-t from-marca-500 to-marca-300"
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Filas de cursos */}
+        <div className="mt-3 space-y-1.5">
+          {[
+            ["8°A · Jefatura", "97%", true],
+            ["I°B · Matemática", "94%", false],
+          ].map(([curso, pct, jefe]) => (
+            <div key={curso as string} className="flex items-center gap-2 rounded-lg border border-borde bg-superficie px-3 py-2">
+              <span className="text-xs font-semibold text-tinta">{curso}</span>
+              {jefe && <span className="insignia insignia-marca !py-0 text-[9px]">Jefatura</span>}
+              <span className="ml-auto insignia insignia-exito !py-0 text-[10px]">{pct} asist.</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default async function Home() {
+  const sesion = await auth();
+  if (sesion?.user) redirect("/dashboard");
+
+  // Datos estructurados (schema.org) para buscadores. CLF = código ISO de la UF.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Aulia",
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    inLanguage: "es-CL",
+    description:
+      "Plataforma de gestión escolar chilena: libro de clases, planificación, comunicación con apoderados y administración. Rápida, moderna y con IA incluida.",
+    // El precio se expresa por estudiante matriculado al año, en UF (CLF es el
+    // código ISO 4217 de la Unidad de Fomento).
+    offers: PLANES.map((p) => ({
+      "@type": "Offer",
+      name: p.nombre,
+      priceCurrency: "CLF",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: String(p.ufPorEstudiante),
+        priceCurrency: "CLF",
+        unitText: "estudiante/año",
+        referenceQuantity: {
+          "@type": "QuantitativeValue",
+          value: 1,
+          unitText: "estudiante",
+        },
+        minPrice: String(p.pisoUf),
+      },
+    })),
+    provider: {
+      "@type": "Organization",
+      name: "Aulia",
+      url: "https://educhile.cl",
+      areaServed: "CL",
+      slogan: "El libro de clases que los profesores de verdad quieren usar.",
+    },
+  };
+
+  return (
+    <div className="min-h-screen bg-lienzo">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      {/* Salto al contenido (accesibilidad por teclado) */}
+      <a
+        href="#contenido"
+        className="sr-only left-3 top-3 z-50 rounded-lg bg-marca-600 px-4 py-2 text-sm font-semibold text-white shadow-elevada focus:not-sr-only focus:fixed"
+      >
+        Saltar al contenido
+      </a>
+      {/* Barra superior */}
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+        <Marca />
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <a href="#modulos" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-2 hover:text-tinta sm:inline-block">
+            Módulos
+          </a>
+          <a href="#planes" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-2 hover:text-tinta sm:inline-block">
+            Planes
+          </a>
+          <a href="#sostenedores" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-2 hover:text-tinta lg:inline-block">
+            Sostenedores
+          </a>
+          <Link
+            href="/login"
+            className="rounded-lg border border-borde-fuerte bg-superficie px-4 py-2 text-sm font-semibold text-tinta shadow-suave transition-colors hover:bg-superficie-2"
+          >
+            Ingresar
+          </Link>
+        </nav>
+      </header>
+
+      {/* Héroe */}
+      <section id="contenido" className="mx-auto max-w-6xl px-5 pt-8 sm:px-8 sm:pt-14">
+        <div className="encabezado-cine malla-academica relative overflow-hidden rounded-3xl px-6 py-12 shadow-elevada sm:px-14 sm:py-16">
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent" aria-hidden />
+          <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="max-w-2xl animar-surgir">
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Gestión escolar para colegios chilenos</p>
+              <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl">
+                El libro de clases que los profesores <span className="text-acento resplandor-dato">de verdad</span> quieren usar.
+              </h1>
+              <p className="mt-5 text-lg text-white/80">
+                Asistencia, notas, planificación y comunicación con las familias en una
+                plataforma rápida, con IA docente incluida y que pasa lista incluso sin
+                señal. Cumple Circular N°30 y Decreto 67 de fábrica.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <a href="#demo" className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-marca-700 shadow-suave transition-transform hover:-translate-y-0.5">
+                  Solicitar demo
+                </a>
+                <a href="#planes" className="rounded-xl border border-white/25 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+                  Ver precios
+                </a>
+              </div>
+              <p className="mt-4 text-sm text-white/50">
+                Prueba de 60 días · migración e implementación sin costo · precio publicado
+              </p>
+            </div>
+
+            {/* Vista previa del producto — mockup autocontenido con los tokens reales */}
+            <VistaPrevia />
+          </div>
+        </div>
+
+        {/* Tira de métricas de confianza */}
+        <div className="surgir-secuencia mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["2 clics", "para cualquier acción frecuente"],
+            ["Circular N°30", "auditoría y respaldo a 5 años"],
+            ["Sin señal", "la lista se toma igual"],
+            ["IA incluida", "en el plan, sin costo extra"],
+          ].map(([valor, etiqueta]) => (
+            <div key={valor} className="superficie superficie-realce rounded-2xl px-5 py-4 text-center">
+              <p className="cifra text-2xl text-marca-700">{valor}</p>
+              <p className="mt-1 text-xs text-tinta-tenue">{etiqueta}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Módulos */}
+      <section id="modulos" className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">Todo el colegio, en un solo lugar</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
+          Cuatro módulos que cubren el día a día del establecimiento, del aula a la dirección.
+        </p>
+        <div className="surgir-secuencia mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {MODULOS.map((m) => {
+            const Icono = Iconos[m.icono];
+            return (
+              <div key={m.titulo} className="superficie tarjeta-int rounded-2xl p-6">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-marca-50 text-marca-600">
+                  <Icono className="h-6 w-6" />
+                </span>
+                <h3 className="mt-4 font-display text-lg font-semibold tracking-tight text-tinta">{m.titulo}</h3>
+                <p className="mt-1.5 text-sm text-tinta-suave">{m.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Diferenciadores: lo que no tienen las plataformas tradicionales */}
+      <section className="revelar-scroll mx-auto max-w-6xl px-5 pb-16 sm:px-8 sm:pb-24">
+        <div className="superficie overflow-hidden rounded-3xl">
+          <div className="border-b border-borde bg-superficie-2 px-6 py-6 text-center sm:px-8">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-tinta sm:text-3xl">
+              Cuatro cosas que solo encuentras acá
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-tinta-suave">
+              Los módulos los tiene todo el mercado. Esto es lo que hace la diferencia
+              en un martes cualquiera a las 8:15 de la mañana.
+            </p>
+          </div>
+          <div className="grid divide-y divide-borde sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
+            {DIFERENCIADORES.map((d, i) => (
+              <div
+                key={d.titulo}
+                className={`p-6 sm:p-7 ${i > 0 ? "lg:border-l lg:border-borde" : ""} ${
+                  i === 1 ? "sm:border-l sm:border-borde" : ""
+                } ${i >= 2 ? "sm:border-t sm:border-borde lg:border-t-0" : ""} ${
+                  i === 3 ? "sm:border-l sm:border-borde" : ""
+                }`}
+              >
+                <span className="cifra text-sm text-marca-500">0{i + 1}</span>
+                <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-tinta">
+                  {d.titulo}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-tinta-suave">{d.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Hecha por profesores */}
+      <section className="bg-superficie-2 py-16 sm:py-24">
+        <div className="revelar-scroll mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-marca-600">Hecha por profesores, para profesores</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-tinta">
+              Nace en la sala de clases, no en una oficina.
+            </h2>
+            <p className="mt-4 text-tinta-suave">
+              Aulia la diseñamos junto a docentes de aula que conocen el peso de la burocracia: tomar
+              asistencia entre el timbre y la lista, ingresar notas apurados, informar a las familias sin
+              que se pierda nada. Cada pantalla está pensada para ahorrar minutos que hoy se van en el sistema.
+            </p>
+            <ul className="mt-6 space-y-2.5">
+              {["Menos clics, más clases.", "Cumple la normativa chilena sin que tengas que pensar en ella.", "Funciona en el computador del colegio y en tu teléfono."].map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-sm text-tinta">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-exito-suave text-[11px] font-bold text-exito">✓</span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/*
+            Prueba social honesta: en vez de un testimonio inventado o de cifras de
+            usuarios que aún no tenemos, mostramos cambios concretos y verificables
+            que salieron de sesiones con profesoras de aula. Es específico, es cierto
+            y dice más que un "500+ colegios" que no podríamos respaldar.
+          */}
+          <div className="superficie rounded-3xl p-7">
+            <p className="text-xs font-semibold uppercase tracking-wider text-marca-600">
+              Del cuaderno de notas de una profesora al producto
+            </p>
+            <p className="mt-2 text-sm text-tinta-suave">
+              Estas son mejoras que existen porque una docente de aula nos dijo que
+              faltaban. Sin comité de producto en medio.
+            </p>
+            <ul className="mt-5 space-y-4">
+              {[
+                ["“Nadie dice registro de clases, decimos leccionario.”", "Renombramos el módulo y lo agrupamos por mes, como está el cuaderno físico."],
+                ["“El calendario es un muro de texto gris.”", "Cada asignatura tiene su color, con contraste verificado y sin depender solo del color."],
+                ["“Tengo que avisarles a los apoderados porque no les llega la nota.”", "Cuando se publica una evaluación, el aviso a la familia sale solo."],
+                ["“Si se cae internet en el gimnasio, pierdo la lista.”", "La asistencia se guarda en el teléfono y se sincroniza cuando vuelve la señal."],
+              ].map(([cita, respuesta]) => (
+                <li key={cita} className="border-l-2 border-acento pl-4">
+                  <p className="font-display text-sm italic leading-relaxed text-tinta">{cita}</p>
+                  <p className="mt-1 text-sm text-tinta-suave">{respuesta}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparativa */}
+      <section className="revelar-scroll mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-24">
+        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">Por qué cambiarte</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
+          Frente a las plataformas tradicionales, Aulia pone la rapidez y la experiencia primero.
+        </p>
+        <div className="mt-10 overflow-hidden rounded-2xl border border-borde bg-superficie shadow-suave">
+          <div className="grid grid-cols-[1fr] divide-y divide-borde sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] sm:divide-y-0">
+            <div className="hidden bg-superficie-2 sm:block" />
+            <div className="hidden bg-superficie-2 px-5 py-3 text-sm font-semibold text-tinta-tenue sm:block">Plataformas tradicionales</div>
+            <div className="hidden bg-marca-50 px-5 py-3 text-sm font-semibold text-marca-700 sm:block">Aulia</div>
+          </div>
+          <ul className="divide-y divide-borde">
+            {COMPARATIVA.map((c) => (
+              <li key={c.criterio} className="grid gap-1 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] sm:items-center sm:gap-4">
+                <span className="font-semibold text-tinta">{c.criterio}</span>
+                <span className="text-sm text-tinta-tenue">{c.tradicional}</span>
+                <span className="flex items-start gap-2 text-sm font-medium text-tinta">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-exito-suave text-[10px] font-bold text-exito">✓</span>
+                  {c.aulia}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Planes */}
+      <section id="planes" className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">
+          Precio publicado, calculado a la vista
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-tinta-suave">
+          En este mercado casi nadie publica sus tarifas. Nosotros sí: se paga por
+          estudiante matriculado, una vez al año, en UF. Usuarios ilimitados,
+          implementación y soporte incluidos.
+        </p>
+
+        <div className="surgir-secuencia mt-10 grid gap-4 lg:grid-cols-3">
+          {PLANES.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative flex flex-col rounded-2xl p-6 ${
+                plan.destacado
+                  ? // mt-4 en móvil: la insignia sobresale por arriba y en la grilla
+                    // apilada quedaba encima de la tarjeta anterior.
+                    "encabezado-cine malla-academica mt-4 text-white shadow-flotante ring-1 ring-acento/30 lg:mt-0"
+                  : "superficie tarjeta-int"
+              }`}
+            >
+              {plan.destacado && (
+                <span className="insignia absolute -top-3 left-6 bg-white text-[11px] font-bold text-marca-700 shadow-elevada">
+                  Más elegido
+                </span>
+              )}
+              <h3 className={`font-display text-lg font-semibold tracking-tight ${plan.destacado ? "text-white" : "text-tinta"}`}>
+                {plan.nombre}
+              </h3>
+              <p className={`mt-1 text-xs ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
+                {plan.resumen}
+              </p>
+
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className={`cifra text-4xl ${plan.destacado ? "text-white resplandor-dato" : "text-tinta"}`}>
+                  UF {formatearUF(plan.ufPorEstudiante)}
+                </span>
+                <span className={`text-sm ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
+                  /estudiante/año
+                </span>
+              </div>
+              <p className={`mt-0.5 text-xs ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
+                Mínimo UF {plan.pisoUf} al año · un colegio de 600 estudiantes paga{" "}
+                {formatearCLP(cotizar(plan, 600).clpAnual)}
+              </p>
+
+              <ul className="mt-5 flex-1 space-y-2.5">
+                {plan.incluye.map((item) => (
+                  <li key={item} className={`flex items-start gap-2.5 text-sm ${plan.destacado ? "text-white/85" : "text-tinta"}`}>
+                    <span
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        plan.destacado ? "bg-white text-marca-700" : "bg-exito-suave text-exito"
+                      }`}
+                      aria-hidden
+                    >
+                      ✓
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <a
+                href="#demo"
+                className={`mt-6 rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition-transform hover:-translate-y-0.5 ${
+                  plan.destacado
+                    ? "bg-white text-marca-700 shadow-suave"
+                    : "btn btn-secundario"
+                }`}
+              >
+                Solicitar demo
+              </a>
+            </div>
+          ))}
+        </div>
+
+        {/* Calculadora: el director tiene que ver SU número antes de escribirnos */}
+        <div className="mt-12">
+          <CalculadoraPrecio />
+        </div>
+
+        {/* Tabla de referencia por tamaño de establecimiento */}
+        <div className="mt-10 overflow-hidden rounded-2xl border border-borde bg-superficie shadow-suave">
+          <div className="border-b border-borde bg-superficie-2 px-5 py-3">
+            <p className="text-sm font-semibold text-tinta">Referencia rápida por tamaño</p>
+            <p className="mt-0.5 text-xs text-tinta-tenue">
+              Total anual en UF por establecimiento, con los tramos de volumen ya aplicados.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[34rem] text-sm">
+              <thead>
+                <tr className="border-b border-borde text-left text-xs uppercase tracking-wider text-tinta-tenue">
+                  <th scope="col" className="px-5 py-3 font-semibold">Matrícula</th>
+                  {PLANES.map((p) => (
+                    <th key={p.id} scope="col" className="px-5 py-3 font-semibold">
+                      {p.nombre}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-borde">
+                {EJEMPLOS_MATRICULA.map((matricula) => (
+                  <tr key={matricula}>
+                    <th scope="row" className="px-5 py-3 text-left font-semibold text-tinta">
+                      {matricula.toLocaleString("es-CL")} estudiantes
+                    </th>
+                    {PLANES.map((plan) => {
+                      const c = cotizar(plan, matricula);
+                      return (
+                        <td key={plan.id} className="px-5 py-3 text-tinta-suave">
+                          <span className="cifra text-tinta">UF {formatearUF(c.ufAnual)}</span>
+                          <span className="mt-0.5 block text-xs text-tinta-tenue">
+                            ≈ {formatearCLP(c.clpAnual)}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-tinta-suave">
+          Todos los planes incluyen <strong className="font-semibold text-tinta">prueba gratis de 60 días</strong>,
+          migración asistida e implementación sin costo, y{" "}
+          <strong className="font-semibold text-tinta">precio congelado por 2 años</strong>.
+          Descuento adicional para sostenedores con 2 o más establecimientos. Valores
+          netos, sin IVA.
+        </p>
+      </section>
+
+      {/* Sostenedores y compra pública */}
+      <section id="sostenedores" className="bg-superficie-2 py-16 sm:py-24">
+        <div className="revelar-scroll mx-auto max-w-6xl px-5 sm:px-8">
+          <div className="grid items-start gap-10 lg:grid-cols-[1fr_1fr]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-marca-600">
+                Sostenedores, DAEM y SLEP
+              </p>
+              <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-tinta">
+                Pensado para cómo compra de verdad un sostenedor.
+              </h2>
+              <p className="mt-4 text-tinta-suave">
+                La Circular N°30 obliga a tener el libro de clases digital con registro de
+                toda acción y respaldo a cinco años. Nosotros entregamos la evidencia de ese
+                cumplimiento y la documentación que tu unidad de compras necesita, para que
+                el trámite no sea el obstáculo.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  ["Cotización en UF lista para Mercado Público", "Ficha técnica, cotización formal y respaldo de cumplimiento para Compra Ágil o licitación L1, por establecimiento o por la comuna completa."],
+                  ["Un contrato para toda la red", "Panel del sostenedor con asistencia, notas, recaudación y alertas de todos tus establecimientos, comparables entre sí. 12% de descuento sobre el total de la red."],
+                  ["Implementación por establecimiento, sin cortar el año", "Se puede correr en paralelo con la plataforma actual durante la marcha blanca; la migración de cursos, estudiantes y matrícula la hacemos nosotros."],
+                  ["Respaldo y salida sin secuestro de datos", "Exportación completa del libro de clases y de la matrícula cuando quieras, en formato abierto. Tus datos son tuyos, también si te vas."],
+                ].map(([titulo, desc]) => (
+                  <li key={titulo} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-marca-50 text-[11px] font-bold text-marca-600" aria-hidden>
+                      →
+                    </span>
+                    <span>
+                      <strong className="block text-sm font-semibold text-tinta">{titulo}</strong>
+                      <span className="text-sm text-tinta-suave">{desc}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="superficie rounded-3xl p-7">
+              <p className="text-xs font-semibold uppercase tracking-wider text-tinta-tenue">
+                Ejemplo · red de 3 establecimientos
+              </p>
+              <p className="mt-2 text-sm text-tinta-suave">
+                Plan Gestión Escolar, con el descuento de red aplicado sobre cada
+                establecimiento.
+              </p>
+              <ul className="mt-5 divide-y divide-borde">
+                {[420, 780, 1250].map((matricula) => {
+                  const c = cotizar(PLANES[2], matricula, { red: true });
+                  return (
+                    <li key={matricula} className="flex items-baseline justify-between gap-3 py-3">
+                      <span className="text-sm text-tinta">
+                        {matricula.toLocaleString("es-CL")} estudiantes
+                      </span>
+                      <span className="text-right">
+                        <span className="cifra block text-tinta">UF {formatearUF(c.ufAnual)}</span>
+                        <span className="text-xs text-tinta-tenue">{formatearCLP(c.clpAnual)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-4 rounded-xl bg-marca-50 p-4">
+                <p className="text-xs font-medium text-marca-700">Total anual de la red</p>
+                <p className="cifra mt-0.5 text-2xl text-marca-700">
+                  UF{" "}
+                  {formatearUF(
+                    Math.round(
+                      [420, 780, 1250].reduce(
+                        (s, m) => s + cotizar(PLANES[2], m, { red: true }).ufAnual,
+                        0,
+                      ) * 10,
+                    ) / 10,
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-marca-700/70">
+                  {formatearCLP(
+                    [420, 780, 1250].reduce(
+                      (s, m) => s + cotizar(PLANES[2], m, { red: true }).clpAnual,
+                      0,
+                    ),
+                  )}{" "}
+                  al año · 2.450 estudiantes · usuarios ilimitados
+                </p>
+              </div>
+              <a
+                href="#demo"
+                className="btn btn-secundario mt-5 w-full justify-center"
+              >
+                Pedir cotización para mi red
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Preguntas frecuentes */}
+      <section className="revelar-scroll mx-auto max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
+        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">
+          Preguntas frecuentes
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
+          Lo que suele preguntar la dirección antes de cambiarse.
+        </p>
+        <div className="mt-10 space-y-3">
+          {PREGUNTAS.map((p) => (
+            <details
+              key={p.q}
+              className="superficie group rounded-xl px-5 py-4 [&_summary]:cursor-pointer"
+            >
+              <summary className="flex list-none items-center justify-between gap-3 font-semibold text-tinta marker:content-none">
+                {p.q}
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-superficie-3 text-tinta-suave transition-transform duration-200 group-open:rotate-45"
+                  aria-hidden
+                >
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-tinta-suave">{p.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA + formulario */}
+      <section id="demo" className="bg-superficie-2 py-16 sm:py-24">
+        <div className="revelar-scroll mx-auto grid max-w-5xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2">
+          <div>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-tinta">Conoce Aulia en una demo</h2>
+            <p className="mt-4 text-tinta-suave">
+              Te mostramos la plataforma con datos de tu realidad y respondemos tus dudas de implementación,
+              migración y precio. Sin compromiso.
+            </p>
+            <ul className="mt-6 space-y-2.5 text-sm text-tinta">
+              {["Implementación acompañada", "Migración desde tu sistema actual", "Capacitación a tu equipo"].map((t) => (
+                <li key={t} className="flex items-center gap-2.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-marca-50 text-[11px] font-bold text-marca-600">→</span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <FormularioDemo />
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-borde bg-lienzo">
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:px-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="sm:col-span-2 lg:col-span-1">
+            <Marca />
+            <p className="mt-3 max-w-xs text-sm text-tinta-suave">
+              El libro de clases moderno para colegios chilenos. Rápido, claro y
+              hecho para el aula.
+            </p>
+          </div>
+          {[
+            {
+              titulo: "Producto",
+              enlaces: [
+                { t: "Módulos", h: "#modulos" },
+                { t: "Planes", h: "#planes" },
+                { t: "Solicitar demo", h: "#demo" },
+                { t: "Ingresar", h: "/login" },
+              ],
+            },
+            {
+              titulo: "Cumplimiento",
+              enlaces: [
+                { t: "Circular N°30", h: "#modulos" },
+                { t: "Decreto 67/2018", h: "#modulos" },
+                { t: "Exportación SIGE", h: "#modulos" },
+                { t: "Protección de datos (Ley 21.719)", h: "#demo" },
+              ],
+            },
+            {
+              titulo: "Contacto",
+              enlaces: [
+                { t: "Agendar demo", h: "#demo" },
+                { t: "Migración asistida", h: "#demo" },
+                { t: "Soporte", h: "#demo" },
+              ],
+            },
+          ].map((col) => (
+            <div key={col.titulo}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-tinta-tenue">
+                {col.titulo}
+              </p>
+              <ul className="mt-3 space-y-2">
+                {col.enlaces.map((e) => (
+                  <li key={e.t}>
+                    <a
+                      href={e.h}
+                      className="text-sm text-tinta-suave transition-colors hover:text-marca-700"
+                    >
+                      {e.t}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-borde">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-tinta-tenue sm:flex-row sm:px-8">
+            <p>© {new Date().getUTCFullYear()} Aulia · Gestión escolar para Chile</p>
+            <p>Hecho en Chile, para colegios chilenos.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

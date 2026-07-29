@@ -1,25 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-// Body: Inter para texto, tablas, formularios y datos operativos
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-body",
-  display: "swap",
-});
-
-// Display: Plus Jakarta Sans para títulos y cifras destacadas. Reemplaza a
-// Poppins: mismo aire moderno, pero con formas más humanas y menos geométricas,
-// que es lo que hace que la interfaz se sienta cercana sin perder autoridad
-// frente a un director o un sostenedor.
-const displaySans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-display",
-  display: "swap",
-});
+// Fuentes: stack del sistema (sin dependencia de Google Fonts en build).
+// Mantiene las variables --font-body y --font-display que usa globals.css.
+const fontVars = {
+  "--font-body":
+    'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  "--font-display":
+    '"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+} as React.CSSProperties;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://educhile.cl"),
@@ -67,7 +56,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-CL" className={`${inter.variable} ${displaySans.variable}`}>
+    <html lang="es-CL" style={fontVars}>
       <body className="min-h-screen antialiased font-body">{children}</body>
     </html>
   );

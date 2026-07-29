@@ -421,6 +421,16 @@ async function main() {
   }
   await chunked(anotRows, (c) => prisma.anotacion.createMany({ data: c }));
 
+  // ── Catálogo de OA (referencia global) — debe existir ANTES de las
+  // planificaciones que lo referencian (FK oaCodigo). ─────────────────────────
+  for (const oa of OA_SEED) {
+    await prisma.oa.upsert({
+      where: { codigo: oa.codigo },
+      update: { asignatura: oa.asignatura, nivel: oa.nivel, numero: oa.numero, eje: oa.eje, descripcion: oa.descripcion },
+      create: oa,
+    });
+  }
+
   // ── Planificaciones con OA + clases firmadas (cobertura curricular) ─────────
   // Solo para Lenguaje/Matemática de básica (donde hay OA en el catálogo).
   const oaPorNivelAsig = (nivel: string, asignatura: string) =>
@@ -543,15 +553,6 @@ async function main() {
         proximaCita: e.proxima,
         autorId: jefePorCurso.get(e.est.cursoId)!,
       },
-    });
-  }
-
-  // ── Catálogo de OA (referencia global) ──────────────────────────────────────
-  for (const oa of OA_SEED) {
-    await prisma.oa.upsert({
-      where: { codigo: oa.codigo },
-      update: { asignatura: oa.asignatura, nivel: oa.nivel, numero: oa.numero, eje: oa.eje, descripcion: oa.descripcion },
-      create: oa,
     });
   }
 

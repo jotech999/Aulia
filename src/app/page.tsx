@@ -667,8 +667,9 @@ export default async function Home() {
 
       {/* Planes */}
       <section id="planes" className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
-        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">
-          Precio publicado, calculado a la vista
+        <p className="text-center text-xs font-bold uppercase tracking-widest text-marca-600">Planes</p>
+        <h2 className="mt-2 text-center font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          Precio publicado, <span className="texto-degradado">calculado a la vista</span>
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-tinta-suave">
           En este mercado casi nadie publica sus tarifas. Nosotros sí: se paga por
@@ -676,44 +677,47 @@ export default async function Home() {
           implementación y soporte incluidos.
         </p>
 
-        <div className="surgir-secuencia mt-10 grid gap-4 lg:grid-cols-3">
+        <div className="surgir-secuencia mt-12 grid items-stretch gap-5 lg:grid-cols-3">
           {PLANES.map((plan) => (
             <div
               key={plan.id}
-              className={`relative flex flex-col rounded-2xl p-6 ${
+              className={`relative flex flex-col rounded-2xl p-6 transition-transform duration-300 sm:p-7 ${
                 plan.destacado
                   ? // mt-4 en móvil: la insignia sobresale por arriba y en la grilla
                     // apilada quedaba encima de la tarjeta anterior.
-                    "encabezado-cine malla-academica mt-4 text-white shadow-flotante ring-1 ring-acento/30 lg:mt-0"
-                  : "superficie tarjeta-int"
+                    "encabezado-cine malla-academica estrellas mt-4 overflow-hidden text-white shadow-flotante ring-1 ring-acento/40 lg:mt-0 lg:-my-3 lg:scale-[1.02] lg:hover:scale-[1.035]"
+                  : "superficie tarjeta-int tarjeta-lumen hover:-translate-y-1"
               }`}
             >
               {plan.destacado && (
-                <span className="insignia absolute -top-3 left-6 bg-white text-[11px] font-bold text-marca-700 shadow-elevada">
-                  Más elegido
-                </span>
+                <>
+                  <span className="aurora-luz aurora-luz-2" aria-hidden />
+                  <span className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 rounded-b-xl bg-acento px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-marca-900 shadow-elevada">
+                    ★ Más elegido
+                  </span>
+                </>
               )}
-              <h3 className={`font-display text-lg font-semibold tracking-tight ${plan.destacado ? "text-white" : "text-tinta"}`}>
+              <h3 className={`relative font-display text-lg font-semibold tracking-tight ${plan.destacado ? "mt-4 text-white" : "text-tinta"}`}>
                 {plan.nombre}
               </h3>
-              <p className={`mt-1 text-xs ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
+              <p className={`relative mt-1 text-xs ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
                 {plan.resumen}
               </p>
 
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className={`cifra text-4xl ${plan.destacado ? "text-white resplandor-dato" : "text-tinta"}`}>
+              <div className="relative mt-5 flex items-baseline gap-1.5">
+                <span className={`cifra text-5xl tracking-tight ${plan.destacado ? "text-white resplandor-dato" : "texto-degradado"}`}>
                   UF {formatearUF(plan.ufPorEstudiante)}
                 </span>
                 <span className={`text-sm ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
                   /estudiante/año
                 </span>
               </div>
-              <p className={`mt-0.5 text-xs ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
+              <p className={`relative mt-0.5 text-xs ${plan.destacado ? "text-white/60" : "text-tinta-tenue"}`}>
                 Mínimo UF {plan.pisoUf} al año · un colegio de 600 estudiantes paga{" "}
                 {formatearCLP(cotizar(plan, 600).clpAnual)}
               </p>
 
-              <ul className="mt-5 flex-1 space-y-2.5">
+              <ul className="relative mt-5 flex-1 space-y-2.5">
                 {plan.incluye.map((item) => (
                   <li key={item} className={`flex items-start gap-2.5 text-sm ${plan.destacado ? "text-white/85" : "text-tinta"}`}>
                     <span
@@ -731,9 +735,9 @@ export default async function Home() {
 
               <a
                 href="#demo"
-                className={`mt-6 rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition-transform hover:-translate-y-0.5 ${
+                className={`relative mt-6 rounded-xl px-4 py-3 text-center text-sm font-bold transition-all hover:-translate-y-0.5 ${
                   plan.destacado
-                    ? "bg-white text-marca-700 shadow-suave"
+                    ? "boton-brillo bg-white text-marca-700 shadow-suave hover:shadow-[0_0_28px_rgba(255,255,255,0.3)]"
                     : "btn btn-secundario"
                 }`}
               >
@@ -744,8 +748,13 @@ export default async function Home() {
         </div>
 
         {/* Calculadora: el director tiene que ver SU número antes de escribirnos */}
-        <div className="mt-12">
-          <CalculadoraPrecio />
+        <div className="relative mt-14">
+          {/* Marco luminoso permanente: es EL diferenciador comercial de la página */}
+          <div className="pointer-events-none absolute -inset-1 rounded-[28px] bg-gradient-to-r from-marca-400 via-acento to-marca-400 opacity-30 blur-md" aria-hidden />
+          <div className="pointer-events-none absolute -inset-px rounded-[26px] bg-gradient-to-r from-marca-400 via-acento to-marca-400 opacity-60" aria-hidden />
+          <div className="relative">
+            <CalculadoraPrecio />
+          </div>
         </div>
 
         {/* Tabla de referencia por tamaño de establecimiento */}

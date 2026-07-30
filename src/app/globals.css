@@ -764,3 +764,108 @@ body {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Ola 1.5 · "Más vida": héroe full-bleed, estrellas, cinta, texto vivo,
+   bordes luminosos y barras que crecen.
+   ========================================================================== */
+
+/* Estrellas que parpadean sobre el héroe oscuro (dos capas desfasadas). */
+.estrellas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 28%, rgba(255,255,255,0.8), transparent 100%),
+    radial-gradient(1px 1px at 34% 12%, rgba(255,255,255,0.6), transparent 100%),
+    radial-gradient(1.5px 1.5px at 58% 34%, rgba(255,244,214,0.7), transparent 100%),
+    radial-gradient(1px 1px at 73% 18%, rgba(255,255,255,0.55), transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 42%, rgba(255,255,255,0.65), transparent 100%),
+    radial-gradient(1px 1px at 22% 64%, rgba(255,255,255,0.4), transparent 100%),
+    radial-gradient(1px 1px at 66% 72%, rgba(255,244,214,0.45), transparent 100%),
+    radial-gradient(1.5px 1.5px at 44% 52%, rgba(255,255,255,0.5), transparent 100%);
+  animation: estrellas-parpadeo 5s ease-in-out infinite alternate;
+}
+@keyframes estrellas-parpadeo {
+  from { opacity: 0.35; }
+  50% { opacity: 0.9; }
+  to { opacity: 0.5; }
+}
+
+/* Texto vivo: degradado animado sobre la palabra clave del titular. */
+.texto-vivo {
+  background: linear-gradient(
+    100deg,
+    var(--color-acento, #fcd34d) 0%,
+    #fff7e0 28%,
+    var(--color-acento, #fcd34d) 55%,
+    #f0abfc 80%,
+    var(--color-acento, #fcd34d) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: texto-vivo-fluye 6s ease-in-out infinite;
+}
+@keyframes texto-vivo-fluye {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Cinta deslizante (marquee) al pie del héroe. */
+.cinta {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.cinta-pista {
+  display: flex;
+  width: max-content;
+  animation: cinta-desliza 32s linear infinite;
+}
+@keyframes cinta-desliza {
+  to { transform: translateX(-50%); }
+}
+.cinta:hover .cinta-pista { animation-play-state: paused; }
+
+/* Borde luminoso en hover: un degradado que "enciende" el contorno. */
+.tarjeta-lumen {
+  position: relative;
+  background-clip: padding-box;
+}
+.tarjeta-lumen::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--color-marca-400), transparent 40%, transparent 60%, var(--color-acento, #fcd34d));
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.tarjeta-lumen:hover::before { opacity: 1; }
+
+/* Ícono con gradiente de marca. */
+.icono-gradiente {
+  background: linear-gradient(135deg, var(--color-marca-600), var(--color-marca-400));
+}
+
+/* Barras del mockup que crecen desde cero al cargar. */
+.barra-crece {
+  transform-origin: bottom;
+  animation: barra-crece-anim 0.9s var(--ease-suave) both;
+}
+@keyframes barra-crece-anim {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .estrellas::after, .texto-vivo, .cinta-pista, .barra-crece {
+    animation: none;
+  }
+  .texto-vivo { color: var(--color-acento, #fcd34d); background: none; }
+}

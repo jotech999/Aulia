@@ -97,11 +97,11 @@ const COMPARATIVA: { criterio: string; tradicional: string; aulia: string }[] = 
   { criterio: "Precio", tradicional: "\"Contáctenos\" y cotización a puerta cerrada", aulia: "Publicado, con calculadora en el sitio" },
 ];
 
-function Marca() {
+function Marca({ claro = false }: { claro?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
       <Isotipo className="h-9 w-9" />
-      <span className="font-display text-lg font-bold tracking-tight text-tinta">Aulia</span>
+      <span className={`font-display text-lg font-bold tracking-tight ${claro ? "text-white" : "text-tinta"}`}>Aulia</span>
     </div>
   );
 }
@@ -157,12 +157,12 @@ function VistaPrevia() {
         {/* Mini gráfico de barras */}
         <div className="mt-3 rounded-xl border border-borde bg-superficie-2 p-3">
           <p className="text-[10px] font-medium text-tinta-tenue">Evolución de la asistencia</p>
-          <div className="mt-2 flex h-16 items-end gap-1.5">
+          <div className="barras-crecen mt-2 flex h-16 items-end gap-1.5">
             {barras.map((h, i) => (
               <span
                 key={i}
-                className="flex-1 rounded-t bg-gradient-to-t from-marca-500 to-marca-300"
-                style={{ height: `${h}%` }}
+                className="barra-crece flex-1 rounded-t bg-gradient-to-t from-marca-500 to-marca-300"
+                style={{ height: `${h}%`, animationDelay: `${0.5 + i * 0.09}s` }}
               />
             ))}
           </div>
@@ -241,56 +241,63 @@ export default async function Home() {
       >
         Saltar al contenido
       </a>
-      {/* Barra superior */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-        <Marca />
-        <nav className="flex items-center gap-1 sm:gap-2">
-          <a href="#modulos" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-2 hover:text-tinta sm:inline-block">
-            Módulos
-          </a>
-          <a href="#planes" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-2 hover:text-tinta sm:inline-block">
-            Planes
-          </a>
-          <a href="#sostenedores" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-2 hover:text-tinta lg:inline-block">
-            Sostenedores
-          </a>
-          <Link
-            href="/login"
-            className="rounded-lg border border-borde-fuerte bg-superficie px-4 py-2 text-sm font-semibold text-tinta shadow-suave transition-colors hover:bg-superficie-2"
-          >
-            Ingresar
-          </Link>
-        </nav>
-      </header>
+      {/* ══ Región cinematográfica: header + héroe comparten el fondo oscuro ══ */}
+      <div className="encabezado-cine malla-academica estrellas relative overflow-hidden">
+        {/* Aurora animada: luces que derivan lentamente detrás del contenido */}
+        <span className="aurora-luz aurora-luz-1" aria-hidden />
+        <span className="aurora-luz aurora-luz-2" aria-hidden />
+        <span className="aurora-luz aurora-luz-3" aria-hidden />
 
-      {/* Héroe */}
-      <section id="contenido" className="mx-auto max-w-6xl px-5 pt-8 sm:px-8 sm:pt-14">
-        <div className="encabezado-cine malla-academica relative overflow-hidden rounded-3xl px-6 py-12 shadow-elevada sm:px-14 sm:py-16">
-          {/* Aurora animada: luces que derivan lentamente detrás del contenido */}
-          <span className="aurora-luz aurora-luz-1" aria-hidden />
-          <span className="aurora-luz aurora-luz-2" aria-hidden />
-          <span className="aurora-luz aurora-luz-3" aria-hidden />
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent" aria-hidden />
-          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+        {/* Barra superior en cristal sobre el héroe */}
+        <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+          <Marca claro />
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <a href="#modulos" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:inline-block">
+              Módulos
+            </a>
+            <a href="#planes" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:inline-block">
+              Planes
+            </a>
+            <a href="#sostenedores" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white lg:inline-block">
+              Sostenedores
+            </a>
+            <Link
+              href="/login"
+              className="rounded-lg border border-white/25 bg-white/5 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/15"
+            >
+              Ingresar
+            </Link>
+          </nav>
+        </header>
+
+        {/* Héroe */}
+        <section id="contenido" className="relative z-10 mx-auto max-w-6xl px-5 pb-16 pt-10 sm:px-8 sm:pb-20 sm:pt-14">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="hero-secuencia max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Gestión escolar para colegios chilenos</p>
-              <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl">
-                El libro de clases que los profesores <span className="text-acento resplandor-dato">de verdad</span> quieren usar.
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-white/70 backdrop-blur">
+                <span className="h-1.5 w-1.5 rounded-full bg-acento" />
+                Gestión escolar para colegios chilenos
+              </p>
+              <h1 className="mt-5 font-display text-5xl font-bold leading-[1.02] tracking-tight text-white sm:text-6xl xl:text-[4.4rem]">
+                El libro de clases que los profesores{" "}
+                <span className="texto-vivo">de verdad</span>{" "}
+                quieren usar.
               </h1>
-              <p className="mt-5 text-lg text-white/80">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80 sm:text-xl">
                 Asistencia, notas, planificación y comunicación con las familias en una
                 plataforma rápida, con IA docente incluida y que pasa lista incluso sin
                 señal. Cumple Circular N°30 y Decreto 67 de fábrica.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a href="#demo" className="boton-brillo rounded-xl bg-white px-6 py-3 text-sm font-semibold text-marca-700 shadow-suave transition-transform hover:-translate-y-0.5">
+              <div className="mt-9 flex flex-wrap items-center gap-3">
+                <a href="#demo" className="boton-brillo group rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-marca-700 shadow-flotante transition-all hover:-translate-y-0.5 hover:shadow-[0_0_36px_rgba(255,255,255,0.35)]">
                   Solicitar demo
+                  <span className="ml-2 inline-block transition-transform group-hover:translate-x-1">→</span>
                 </a>
-                <a href="#planes" className="rounded-xl border border-white/25 px-6 py-3 text-sm font-semibold text-white transition-all hover:border-white/50 hover:bg-white/10">
+                <a href="#planes" className="rounded-xl border border-white/25 px-7 py-3.5 text-sm font-semibold text-white transition-all hover:border-white/50 hover:bg-white/10">
                   Ver precios
                 </a>
               </div>
-              <p className="mt-4 text-sm text-white/50">
+              <p className="mt-5 text-sm text-white/50">
                 Prueba de 60 días · migración e implementación sin costo · precio publicado
               </p>
             </div>
@@ -298,10 +305,40 @@ export default async function Home() {
             {/* Vista previa del producto — mockup autocontenido con los tokens reales */}
             <VistaPrevia />
           </div>
-        </div>
+        </section>
 
-        {/* Tira de métricas de confianza */}
-        <div className="surgir-secuencia mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Cinta deslizante: beneficios en movimiento perpetuo */}
+        <div className="relative z-10 border-t border-white/10 bg-white/[0.04] py-3.5">
+          <div className="cinta" aria-hidden>
+            <div className="cinta-pista">
+              {[0, 1].map((copia) => (
+                <div key={copia} className="flex shrink-0 items-center gap-10 pr-10">
+                  {[
+                    "Libro de clases digital",
+                    "Asistencia sin señal",
+                    "IA docente incluida",
+                    "Circular N°30 de fábrica",
+                    "Decreto 67",
+                    "Portal del apoderado",
+                    "Notas desde el celular",
+                    "Migración sin costo",
+                  ].map((t) => (
+                    <span key={t} className="flex items-center gap-10 whitespace-nowrap text-sm font-medium text-white/60">
+                      {t}
+                      <span className="text-acento/70">✦</span>
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent" aria-hidden />
+      </div>
+
+      {/* Tira de métricas de confianza */}
+      <section className="mx-auto max-w-6xl px-5 pt-8 sm:px-8">
+        <div className="surgir-secuencia grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             ["2 clics", "para cualquier acción frecuente"],
             ["Circular N°30", "auditoría y respaldo a 5 años"],
@@ -329,8 +366,8 @@ export default async function Home() {
           {MODULOS.map((m) => {
             const Icono = Iconos[m.icono];
             return (
-              <div key={m.titulo} className="superficie tarjeta-int rounded-2xl p-6">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-marca-50 text-marca-600">
+              <div key={m.titulo} className="superficie tarjeta-int tarjeta-lumen rounded-2xl p-6">
+                <span className="icono-gradiente flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-suave">
                   <Icono className="h-6 w-6" />
                 </span>
                 <h3 className="mt-4 font-display text-lg font-semibold tracking-tight text-tinta">{m.titulo}</h3>

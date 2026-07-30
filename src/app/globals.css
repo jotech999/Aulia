@@ -640,3 +640,127 @@ body {
     break-inside: avoid;
   }
 }
+
+/* ==========================================================================
+   Ola 1 · Landing cinematográfica
+   Aurora animada en el héroe, levitación del mockup, entrada escalonada
+   del texto, brillo de botón y degradado tipográfico en cifras.
+   Todo decorativo y con guard de prefers-reduced-motion.
+   ========================================================================== */
+
+/* Luces de aurora: esferas difusas que derivan lentamente por el héroe. */
+.aurora-luz {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.55;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 0;
+}
+.aurora-luz-1 {
+  width: 460px; height: 460px; left: -10%; top: -35%;
+  background: radial-gradient(circle, rgba(196, 181, 253, 0.55), transparent 65%);
+  animation: aurora-deriva-a 16s ease-in-out infinite alternate;
+}
+.aurora-luz-2 {
+  width: 380px; height: 380px; right: -8%; top: -25%;
+  background: radial-gradient(circle, rgba(255, 205, 130, 0.32), transparent 65%);
+  animation: aurora-deriva-b 21s ease-in-out infinite alternate;
+}
+.aurora-luz-3 {
+  width: 320px; height: 320px; right: 26%; bottom: -40%;
+  background: radial-gradient(circle, rgba(139, 98, 236, 0.5), transparent 65%);
+  animation: aurora-deriva-a 26s ease-in-out infinite alternate-reverse;
+}
+@keyframes aurora-deriva-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(70px, 45px, 0) scale(1.18); }
+}
+@keyframes aurora-deriva-b {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-80px, 35px, 0) scale(1.1); }
+}
+
+/* Levitación del mockup del producto (flotación lenta, casi imperceptible). */
+.levitar {
+  animation: levitar 7s ease-in-out infinite;
+}
+@keyframes levitar {
+  0%, 100% { transform: translateY(0) rotate(0.6deg); }
+  50% { transform: translateY(-12px) rotate(-0.3deg); }
+}
+
+/* Halo luminoso detrás del mockup: lo despega del fondo oscuro. */
+.halo-mockup { position: relative; }
+.halo-mockup::before {
+  content: "";
+  position: absolute;
+  inset: -22px;
+  z-index: -1;
+  border-radius: 28px;
+  background: radial-gradient(60% 60% at 50% 38%, rgba(255, 255, 255, 0.28), transparent 70%);
+  filter: blur(34px);
+}
+
+/* Chips flotantes sobre el mockup: pequeñas notificaciones "vivas". */
+.chip-flotante {
+  animation: chip-entra 0.6s var(--ease-suave) both, chip-flota 6s ease-in-out infinite;
+}
+.chip-flotante-2 {
+  animation-delay: 0.9s, 1.2s;
+}
+@keyframes chip-entra {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes chip-flota {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -7px; }
+}
+
+/* Entrada escalonada del héroe: más lenta y profunda que surgir-secuencia. */
+.hero-secuencia > * {
+  animation: surgir-hero 0.7s var(--ease-suave) both;
+}
+.hero-secuencia > *:nth-child(1) { animation-delay: 0.05s; }
+.hero-secuencia > *:nth-child(2) { animation-delay: 0.16s; }
+.hero-secuencia > *:nth-child(3) { animation-delay: 0.3s; }
+.hero-secuencia > *:nth-child(4) { animation-delay: 0.44s; }
+.hero-secuencia > *:nth-child(5) { animation-delay: 0.58s; }
+@keyframes surgir-hero {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Brillo que barre el CTA principal cada pocos segundos. */
+.boton-brillo { position: relative; overflow: hidden; }
+.boton-brillo::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -140%;
+  width: 55%;
+  background: linear-gradient(105deg, transparent, rgba(124, 58, 237, 0.16) 45%, transparent 85%);
+  transform: skewX(-18deg);
+  animation: brillo-pasa 3.8s ease-in-out infinite;
+}
+@keyframes brillo-pasa {
+  0% { left: -140%; }
+  55% { left: 160%; }
+  100% { left: 160%; }
+}
+
+/* Degradado tipográfico para cifras destacadas sobre fondo claro. */
+.texto-degradado {
+  background: linear-gradient(92deg, var(--color-marca-700), var(--color-marca-500) 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-luz-1, .aurora-luz-2, .aurora-luz-3,
+  .levitar, .chip-flotante, .hero-secuencia > *, .boton-brillo::after {
+    animation: none;
+  }
+}

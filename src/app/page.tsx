@@ -115,8 +115,17 @@ function Marca() {
 function VistaPrevia() {
   const barras = [62, 74, 68, 83, 79, 91, 88, 96];
   return (
-    <div className="animar-surgir hidden lg:block" aria-hidden>
-      <div className="superficie rotate-[0.6deg] rounded-2xl p-4 shadow-flotante ring-1 ring-black/5">
+    <div className="animar-surgir relative hidden lg:block" aria-hidden>
+      {/* Chips flotantes: la plataforma "viva" alrededor del panel */}
+      <div className="chip-flotante absolute -left-8 top-10 z-10 flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-flotante ring-1 ring-black/5">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-exito-suave text-[11px] font-bold text-exito">✓</span>
+        <span className="text-[11px] font-semibold text-tinta">Asistencia sincronizada</span>
+      </div>
+      <div className="chip-flotante chip-flotante-2 absolute -right-5 bottom-16 z-10 flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-flotante ring-1 ring-black/5">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-marca-50 text-[11px]">✨</span>
+        <span className="text-[11px] font-semibold text-tinta">IA: informe al hogar listo</span>
+      </div>
+      <div className="halo-mockup levitar superficie rounded-2xl p-4 shadow-flotante ring-1 ring-black/5">
         {/* Barra de ventana */}
         <div className="flex items-center gap-2 border-b border-borde pb-3">
           <Isotipo className="h-6 w-6" />
@@ -257,9 +266,13 @@ export default async function Home() {
       {/* Héroe */}
       <section id="contenido" className="mx-auto max-w-6xl px-5 pt-8 sm:px-8 sm:pt-14">
         <div className="encabezado-cine malla-academica relative overflow-hidden rounded-3xl px-6 py-12 shadow-elevada sm:px-14 sm:py-16">
+          {/* Aurora animada: luces que derivan lentamente detrás del contenido */}
+          <span className="aurora-luz aurora-luz-1" aria-hidden />
+          <span className="aurora-luz aurora-luz-2" aria-hidden />
+          <span className="aurora-luz aurora-luz-3" aria-hidden />
           <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent" aria-hidden />
-          <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="max-w-2xl animar-surgir">
+          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="hero-secuencia max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Gestión escolar para colegios chilenos</p>
               <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl">
                 El libro de clases que los profesores <span className="text-acento resplandor-dato">de verdad</span> quieren usar.
@@ -270,10 +283,10 @@ export default async function Home() {
                 señal. Cumple Circular N°30 y Decreto 67 de fábrica.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a href="#demo" className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-marca-700 shadow-suave transition-transform hover:-translate-y-0.5">
+                <a href="#demo" className="boton-brillo rounded-xl bg-white px-6 py-3 text-sm font-semibold text-marca-700 shadow-suave transition-transform hover:-translate-y-0.5">
                   Solicitar demo
                 </a>
-                <a href="#planes" className="rounded-xl border border-white/25 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+                <a href="#planes" className="rounded-xl border border-white/25 px-6 py-3 text-sm font-semibold text-white transition-all hover:border-white/50 hover:bg-white/10">
                   Ver precios
                 </a>
               </div>
@@ -295,8 +308,11 @@ export default async function Home() {
             ["Sin señal", "la lista se toma igual"],
             ["IA incluida", "en el plan, sin costo extra"],
           ].map(([valor, etiqueta]) => (
-            <div key={valor} className="superficie superficie-realce rounded-2xl px-5 py-4 text-center">
-              <p className="cifra text-2xl text-marca-700">{valor}</p>
+            <div
+              key={valor}
+              className="superficie superficie-realce rounded-2xl px-5 py-4 text-center transition-transform duration-300 hover:-translate-y-1"
+            >
+              <p className="cifra texto-degradado text-2xl">{valor}</p>
               <p className="mt-1 text-xs text-tinta-tenue">{etiqueta}</p>
             </div>
           ))}

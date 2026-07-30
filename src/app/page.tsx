@@ -532,22 +532,29 @@ export default async function Home() {
       </section>
 
       {/* Hecha por profesores */}
-      <section className="bg-superficie-2 py-16 sm:py-24">
-        <div className="revelar-scroll mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2">
+      <section className="overflow-hidden bg-superficie-2 py-16 sm:py-24">
+        <div className="revelar-scroll mx-auto grid max-w-6xl items-center gap-12 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-marca-600">Hecha por profesores, para profesores</p>
-            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-tinta">
-              Nace en la sala de clases, no en una oficina.
+            <p className="text-xs font-bold uppercase tracking-widest text-marca-600">Hecha por profesores, para profesores</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+              Nace en la <span className="texto-degradado">sala de clases</span>, no en una oficina.
             </h2>
-            <p className="mt-4 text-tinta-suave">
+            <p className="mt-4 leading-relaxed text-tinta-suave">
               Aulia la diseñamos junto a docentes de aula que conocen el peso de la burocracia: tomar
               asistencia entre el timbre y la lista, ingresar notas apurados, informar a las familias sin
               que se pierda nada. Cada pantalla está pensada para ahorrar minutos que hoy se van en el sistema.
             </p>
-            <ul className="mt-6 space-y-2.5">
-              {["Menos clics, más clases.", "Cumple la normativa chilena sin que tengas que pensar en ella.", "Funciona en el computador del colegio y en tu teléfono."].map((t) => (
-                <li key={t} className="flex items-start gap-2.5 text-sm text-tinta">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-exito-suave text-[11px] font-bold text-exito">✓</span>
+            <ul className="mt-7 space-y-3">
+              {[
+                "Menos clics, más clases.",
+                "Cumple la normativa chilena sin que tengas que pensar en ella.",
+                "Funciona en el computador del colegio y en tu teléfono.",
+              ].map((t) => (
+                <li
+                  key={t}
+                  className="superficie flex items-center gap-3 rounded-xl border border-borde px-4 py-3 text-sm font-medium text-tinta shadow-suave transition-transform duration-300 hover:translate-x-1"
+                >
+                  <span className="icono-gradiente flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white">✓</span>
                   {t}
                 </li>
               ))}
@@ -559,27 +566,37 @@ export default async function Home() {
             que salieron de sesiones con profesoras de aula. Es específico, es cierto
             y dice más que un "500+ colegios" que no podríamos respaldar.
           */}
-          <div className="superficie rounded-3xl p-7">
-            <p className="text-xs font-semibold uppercase tracking-wider text-marca-600">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-marca-600">
               Del cuaderno de notas de una profesora al producto
             </p>
             <p className="mt-2 text-sm text-tinta-suave">
-              Estas son mejoras que existen porque una docente de aula nos dijo que
-              faltaban. Sin comité de producto en medio.
+              Mejoras que existen porque una docente de aula dijo que faltaban. Sin comité de producto en medio.
             </p>
-            <ul className="mt-5 space-y-4">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {[
-                ["“Nadie dice registro de clases, decimos leccionario.”", "Renombramos el módulo y lo agrupamos por mes, como está el cuaderno físico."],
-                ["“El calendario es un muro de texto gris.”", "Cada asignatura tiene su color, con contraste verificado y sin depender solo del color."],
-                ["“Tengo que avisarles a los apoderados porque no les llega la nota.”", "Cuando se publica una evaluación, el aviso a la familia sale solo."],
-                ["“Si se cae internet en el gimnasio, pierdo la lista.”", "La asistencia se guarda en el teléfono y se sincroniza cuando vuelve la señal."],
-              ].map(([cita, respuesta]) => (
-                <li key={cita} className="border-l-2 border-acento pl-4">
-                  <p className="font-display text-sm italic leading-relaxed text-tinta">{cita}</p>
-                  <p className="mt-1 text-sm text-tinta-suave">{respuesta}</p>
-                </li>
+                ["Nadie dice registro de clases, decimos leccionario.", "Renombramos el módulo y lo agrupamos por mes, como el cuaderno físico.", "-rotate-1"],
+                ["El calendario es un muro de texto gris.", "Cada asignatura tiene su color, con contraste verificado.", "rotate-1"],
+                ["Tengo que avisarles a los apoderados porque no les llega la nota.", "Al publicar una evaluación, el aviso a la familia sale solo.", "rotate-[0.7deg]"],
+                ["Si se cae internet en el gimnasio, pierdo la lista.", "La asistencia se guarda en el teléfono y se sincroniza sola.", "-rotate-[0.7deg]"],
+              ].map(([cita, respuesta, giro]) => (
+                <figure
+                  key={cita}
+                  className={`superficie relative rounded-2xl border border-borde p-5 pt-7 shadow-suave transition-all duration-300 hover:rotate-0 hover:shadow-flotante ${giro}`}
+                >
+                  <span className="pointer-events-none absolute -top-1 left-4 font-display text-6xl font-bold leading-none text-marca-200" aria-hidden>
+                    “
+                  </span>
+                  <blockquote className="relative font-display text-sm italic leading-relaxed text-tinta">
+                    {cita}
+                  </blockquote>
+                  <figcaption className="mt-3 flex items-start gap-2 border-t border-borde pt-3 text-[13px] leading-snug text-tinta-suave">
+                    <span className="mt-0.5 shrink-0 font-bold text-exito">→</span>
+                    {respuesta}
+                  </figcaption>
+                </figure>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
       </section>

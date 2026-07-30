@@ -601,30 +601,67 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Comparativa */}
+      {/* Comparativa: enfrentamiento visual "tradicional vs Aulia" */}
       <section className="revelar-scroll mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-24">
-        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">Por qué cambiarte</h2>
+        <p className="text-center text-xs font-bold uppercase tracking-widest text-marca-600">Comparativa</p>
+        <h2 className="mt-2 text-center font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          Por qué <span className="texto-degradado">cambiarte</span>
+        </h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
           Frente a las plataformas tradicionales, Aulia pone la rapidez y la experiencia primero.
         </p>
-        <div className="mt-10 overflow-hidden rounded-2xl border border-borde bg-superficie shadow-suave">
-          <div className="grid grid-cols-[1fr] divide-y divide-borde sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] sm:divide-y-0">
-            <div className="hidden bg-superficie-2 sm:block" />
-            <div className="hidden bg-superficie-2 px-5 py-3 text-sm font-semibold text-tinta-tenue sm:block">Plataformas tradicionales</div>
-            <div className="hidden bg-marca-50 px-5 py-3 text-sm font-semibold text-marca-700 sm:block">Aulia</div>
+        <div className="mt-12 grid gap-6 lg:grid-cols-2">
+          {/* Columna: lo tradicional (apagada, en escala de grises) */}
+          <div className="rounded-3xl border border-borde bg-superficie-2 p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-superficie-3 text-lg grayscale">🗄️</span>
+              <div>
+                <h3 className="font-display text-lg font-bold tracking-tight text-tinta-suave">Plataformas tradicionales</h3>
+                <p className="text-xs text-tinta-tenue">El sistema que hoy todos soportan</p>
+              </div>
+            </div>
+            <ul className="mt-6 space-y-3">
+              {COMPARATIVA.map((c) => (
+                <li key={c.criterio} className="flex items-start gap-3 rounded-xl px-3 py-2">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-superficie-3 text-[11px] font-bold text-tinta-tenue">✗</span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-tinta-tenue">{c.criterio}</p>
+                    <p className="mt-0.5 text-sm text-tinta-suave">{c.tradicional}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="divide-y divide-borde">
-            {COMPARATIVA.map((c) => (
-              <li key={c.criterio} className="grid gap-1 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] sm:items-center sm:gap-4">
-                <span className="font-semibold text-tinta">{c.criterio}</span>
-                <span className="text-sm text-tinta-tenue">{c.tradicional}</span>
-                <span className="flex items-start gap-2 text-sm font-medium text-tinta">
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-exito-suave text-[10px] font-bold text-exito">✓</span>
-                  {c.aulia}
+
+          {/* Columna: Aulia (viva, elevada, con marco de marca) */}
+          <div className="encabezado-cine relative overflow-hidden rounded-3xl p-6 shadow-elevada sm:p-8 lg:-my-3">
+            <span className="aurora-luz aurora-luz-2" aria-hidden />
+            <div className="relative z-10">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <Isotipo className="h-6 w-6" />
                 </span>
-              </li>
-            ))}
-          </ul>
+                <div>
+                  <h3 className="font-display text-lg font-bold tracking-tight text-white">Aulia</h3>
+                  <p className="text-xs text-white/60">La plataforma que quieres abrir</p>
+                </div>
+                <span className="ml-auto rounded-full border border-acento/40 bg-acento/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-acento">
+                  Recomendado
+                </span>
+              </div>
+              <ul className="mt-6 space-y-3">
+                {COMPARATIVA.map((c) => (
+                  <li key={c.criterio} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur transition-colors duration-300 hover:bg-white/10">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-exito text-[11px] font-bold text-white">✓</span>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-white/50">{c.criterio}</p>
+                      <p className="mt-0.5 text-sm font-medium text-white">{c.aulia}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -186,6 +186,97 @@ function VistaPrevia() {
   );
 }
 
+/* ── Viñetas de los módulos: mini-interfaces reales, no descripciones ────── */
+
+function VinetaLibro() {
+  return (
+    <div className="space-y-1.5" aria-hidden>
+      {[
+        ["Martina Soto", "P", "exito"],
+        ["Benjamín Rojas", "P", "exito"],
+        ["Sofía González", "A", "peligro"],
+      ].map(([nombre, marca, tono]) => (
+        <div key={nombre as string} className="flex items-center gap-2 rounded-lg border border-borde bg-superficie px-3 py-1.5">
+          <span className="h-5 w-5 rounded-full bg-marca-100" />
+          <span className="text-[11px] font-medium text-tinta">{nombre}</span>
+          <span
+            className={`ml-auto flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold ${
+              tono === "exito" ? "bg-exito-suave text-exito" : "bg-peligro-suave text-peligro"
+            }`}
+          >
+            {marca}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VinetaPlanificacion() {
+  return (
+    <div aria-hidden>
+      <div className="flex flex-wrap gap-1.5">
+        {["OA 04", "OA 05", "OA 07"].map((oa) => (
+          <span key={oa} className="rounded-md bg-marca-50 px-2 py-1 text-[10px] font-bold text-marca-700">{oa}</span>
+        ))}
+        <span className="rounded-md border border-dashed border-borde-fuerte px-2 py-1 text-[10px] font-semibold text-tinta-tenue">+ vincular OA</span>
+      </div>
+      <div className="mt-3 rounded-lg border border-borde bg-superficie p-2.5">
+        <div className="flex items-center justify-between text-[10px] font-medium text-tinta-tenue">
+          <span>Cobertura curricular</span>
+          <span className="cifra font-bold text-marca-700">68%</span>
+        </div>
+        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-superficie-3">
+          <div className="barra-entra h-full w-[68%] rounded-full bg-gradient-to-r from-marca-500 to-marca-300" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VinetaComunicacion() {
+  return (
+    <div aria-hidden>
+      <div className="rounded-xl rounded-bl-sm border border-borde bg-superficie p-3">
+        <p className="text-[11px] font-semibold text-tinta">📌 Reunión de apoderados</p>
+        <p className="mt-0.5 text-[10px] text-tinta-suave">Jueves 19:00 · Sala del 8°A</p>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-exito">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-exito-suave">✓</span>
+        Leído por 28 de 32 familias
+      </div>
+    </div>
+  );
+}
+
+function VinetaAdmin() {
+  return (
+    <div aria-hidden>
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="rounded-lg border border-borde bg-superficie p-2.5">
+          <p className="text-[9px] font-medium text-tinta-tenue">Matrícula</p>
+          <p className="cifra text-base font-bold text-tinta">812</p>
+        </div>
+        <div className="rounded-lg border border-borde bg-superficie p-2.5">
+          <p className="text-[9px] font-medium text-tinta-tenue">Asistencia anual</p>
+          <p className="cifra text-base font-bold text-tinta">94,2%</p>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-alerta/30 bg-alerta-suave px-2.5 py-1.5 text-[10px] font-semibold text-tinta">
+        <span className="h-1.5 w-1.5 rounded-full bg-alerta" />
+        3 estudiantes con alerta temprana
+      </div>
+    </div>
+  );
+}
+
+const VINETAS: Record<string, () => React.JSX.Element> = {
+  "Libro de clases": VinetaLibro,
+  Planificación: VinetaPlanificacion,
+  Comunicación: VinetaComunicacion,
+  Administración: VinetaAdmin,
+};
+
 export default async function Home() {
   const sesion = await auth();
   if (sesion?.user) redirect("/dashboard");
@@ -356,22 +447,37 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Módulos */}
+      {/* Módulos: tarjetas-vitrina con mini-interfaces reales */}
       <section id="modulos" className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
-        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">Todo el colegio, en un solo lugar</h2>
+        <p className="text-center text-xs font-bold uppercase tracking-widest text-marca-600">Módulos</p>
+        <h2 className="mt-2 text-center font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          Todo el colegio, <span className="texto-degradado">en un solo lugar</span>
+        </h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
           Cuatro módulos que cubren el día a día del establecimiento, del aula a la dirección.
+          Así se ven por dentro:
         </p>
-        <div className="surgir-secuencia mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="surgir-secuencia mt-12 grid gap-5 sm:grid-cols-2">
           {MODULOS.map((m) => {
             const Icono = Iconos[m.icono];
+            const Vineta = VINETAS[m.titulo];
             return (
-              <div key={m.titulo} className="superficie tarjeta-int tarjeta-lumen rounded-2xl p-6">
-                <span className="icono-gradiente flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-suave">
-                  <Icono className="h-6 w-6" />
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold tracking-tight text-tinta">{m.titulo}</h3>
-                <p className="mt-1.5 text-sm text-tinta-suave">{m.desc}</p>
+              <div key={m.titulo} className="superficie tarjeta-int tarjeta-lumen group overflow-hidden rounded-2xl">
+                {/* Viñeta: mini-interfaz del módulo */}
+                <div className="relative border-b border-borde bg-gradient-to-br from-superficie-2 to-marca-50/40 p-5 transition-colors duration-300 group-hover:to-marca-50">
+                  <div className="mx-auto max-w-[260px] transition-transform duration-300 group-hover:-translate-y-0.5">
+                    {Vineta ? <Vineta /> : null}
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 p-6">
+                  <span className="icono-gradiente flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-suave">
+                    <Icono className="h-5.5 w-5.5" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-lg font-semibold tracking-tight text-tinta">{m.titulo}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-tinta-suave">{m.desc}</p>
+                  </div>
+                </div>
               </div>
             );
           })}

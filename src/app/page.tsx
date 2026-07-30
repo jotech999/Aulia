@@ -484,36 +484,50 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Diferenciadores: lo que no tienen las plataformas tradicionales */}
-      <section className="revelar-scroll mx-auto max-w-6xl px-5 pb-16 sm:px-8 sm:pb-24">
-        <div className="superficie overflow-hidden rounded-3xl">
-          <div className="border-b border-borde bg-superficie-2 px-6 py-6 text-center sm:px-8">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-tinta sm:text-3xl">
+      {/* Diferenciadores: banda oscura cinematográfica a todo el ancho */}
+      <section className="revelar-scroll mt-4 sm:mt-8">
+        <div className="encabezado-cine malla-academica estrellas relative overflow-hidden py-16 sm:py-24">
+          <span className="aurora-luz aurora-luz-1" aria-hidden />
+          <span className="aurora-luz aurora-luz-3" aria-hidden />
+          <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-8">
+            <p className="text-center text-xs font-bold uppercase tracking-widest text-acento">La diferencia</p>
+            <h2 className="mt-2 text-center font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Cuatro cosas que solo encuentras acá
             </h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-tinta-suave">
+            <p className="mx-auto mt-3 max-w-2xl text-center text-white/70">
               Los módulos los tiene todo el mercado. Esto es lo que hace la diferencia
               en un martes cualquiera a las 8:15 de la mañana.
             </p>
+            <div className="surgir-secuencia mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {DIFERENCIADORES.map((d, i) => {
+                const glifos = [
+                  <Iconos.asistencia key="g" className="h-6 w-6" />,
+                  <span key="g" className="text-xl leading-none">✨</span>,
+                  <span key="g" className="cifra text-sm font-bold leading-none">⌘K</span>,
+                  <Iconos.escudo key="g" className="h-6 w-6" />,
+                ];
+                return (
+                  <div
+                    key={d.titulo}
+                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1.5 hover:border-acento/40 hover:bg-white/10"
+                  >
+                    <span className="cifra pointer-events-none absolute -right-2 -top-4 text-7xl font-bold text-white/[0.06] transition-colors duration-300 group-hover:text-acento/10" aria-hidden>
+                      0{i + 1}
+                    </span>
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-acento transition-transform duration-300 group-hover:scale-110">
+                      {glifos[i]}
+                    </span>
+                    <h3 className="mt-5 font-display text-lg font-semibold tracking-tight text-white">
+                      {d.titulo}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-white/70">{d.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="grid divide-y divide-borde sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
-            {DIFERENCIADORES.map((d, i) => (
-              <div
-                key={d.titulo}
-                className={`p-6 sm:p-7 ${i > 0 ? "lg:border-l lg:border-borde" : ""} ${
-                  i === 1 ? "sm:border-l sm:border-borde" : ""
-                } ${i >= 2 ? "sm:border-t sm:border-borde lg:border-t-0" : ""} ${
-                  i === 3 ? "sm:border-l sm:border-borde" : ""
-                }`}
-              >
-                <span className="cifra text-sm text-marca-500">0{i + 1}</span>
-                <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-tinta">
-                  {d.titulo}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-tinta-suave">{d.desc}</p>
-              </div>
-            ))}
-          </div>
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/60 to-transparent" aria-hidden />
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-acento/60 to-transparent" aria-hidden />
         </div>
       </section>
 

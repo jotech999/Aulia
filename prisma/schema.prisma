@@ -252,6 +252,9 @@ model Usuario {
   nombre       String
   email        String   @unique
   passwordHash String
+  // Contacto (ficha del apoderado): editable por dirección/admin.
+  telefono     String?
+  direccion    String?
   activo       Boolean  @default(true)
   creadoEn     DateTime @default(now())
 

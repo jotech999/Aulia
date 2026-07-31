@@ -7,6 +7,8 @@ import { isoDesdeFecha } from "@/lib/fecha";
 import { autorizarCrearAnotacion } from "@/lib/anotaciones";
 import { participacionEnHilo } from "@/lib/mensajes";
 import { HiloMensajes } from "@/components/mensajes/hilo";
+import { ApoderadosSalud } from "./apoderados-salud";
+import { descifrarSeguro } from "@/lib/cifrado";
 import { iaDisponible } from "@/lib/ia/cliente";
 import { InformeIA } from "./informe-ia-cliente";
 import { autorizarEmision, puedeAnular, NOMBRE_TIPO, type TipoCertificado } from "@/lib/certificados";
@@ -75,6 +77,18 @@ export default async function FichaEstudiantePage({
       nombres: true,
       apellidos: true,
       fechaNacimiento: true,
+      fichaSaludCifrada: true,
+      apoderados: {
+        select: {
+          id: true,
+          parentesco: true,
+          calidad: true,
+          usuario: {
+            select: { nombre: true, rut: true, email: true, telefono: true, direccion: true },
+          },
+        },
+        orderBy: { calidad: "asc" }, // TITULAR < SUPLENTE < SIN_CONFIRMAR (orden del enum)
+      },
       matriculas: {
         where: { colegioId: user.colegioId, estado: "ACTIVA", retiradaEn: null },
         select: {
@@ -440,6 +454,34 @@ export default async function FichaEstudiantePage({
         {iaDisponible() && autorizarCrearAnotacion(user.rol) && (
           <InformeIA estudianteId={estudiante.id} />
         )}
+
+        {(() => {
+          // Ficha de apoderados y antecedentes médicos (pedido docente).
+          const esDireccion = ["ADMIN", "DIRECTOR"].includes(user.rol);
+          const esJefeDelCurso =
+            estudiante.matriculas[0]?.curso.profesorJefeId === user.id;
+          const puedeVerSalud = esDireccion || esJefeDelCurso || user.rol === "INSPECTOR";
+          return (
+            <ApoderadosSalud
+              estudianteId={estudiante.id}
+              puedeEditar={esDireccion}
+              puedeVerSalud={puedeVerSalud}
+              antecedentes={
+                puedeVerSalud && estudiante.fichaSaludCifrada ? descifrarSeguro(estudiante.fichaSaludCifrada) : ""
+              }
+              apoderados={estudiante.apoderados.map((a) => ({
+                apoderadoId: a.id,
+                nombre: a.usuario.nombre,
+                rut: a.usuario.rut,
+                email: a.usuario.email,
+                telefono: a.usuario.telefono,
+                direccion: a.usuario.direccion,
+                parentesco: a.parentesco,
+                calidad: a.calidad,
+              }))}
+            />
+          );
+        })()}
 
         {participacion && (
           <section id="mensajes" className="mt-8 scroll-mt-20">

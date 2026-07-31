@@ -100,6 +100,7 @@ const GRUPOS_BASE: Grupo[] = [
       { href: "/admin/exportaciones", etiqueta: "Exportaciones", icono: "calificaciones", roles: ["ADMIN", "DIRECTOR", "UTP"] },
       { href: "/admin/onboarding", etiqueta: "Puesta en marcha", icono: "cursos", roles: ["ADMIN", "DIRECTOR"] },
       { href: "/admin/cumplimiento", etiqueta: "Cumplimiento", icono: "escudo", roles: ["ADMIN", "DIRECTOR", "UTP"] },
+      { href: "/admin/prospectos", etiqueta: "Prospectos", icono: "comunicacion", roles: ["ADMIN"] },
     ],
   },
 ];

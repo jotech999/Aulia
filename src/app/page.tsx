@@ -6,6 +6,7 @@ import { Isotipo } from "@/components/ui/isotipo";
 import { FormularioDemo } from "@/components/landing/form-demo";
 import { CalculadoraPrecio } from "@/components/landing/calculadora-precio";
 import { PulsoVivo } from "@/components/landing/pulso-vivo";
+import { AuliLanding } from "@/components/landing/auli-landing";
 import { PLANES, cotizar, formatearCLP, formatearUF } from "@/lib/precios";
 
 export const metadata = {
@@ -1062,6 +1063,9 @@ export default async function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Auli: asistente de prospección y captura de correos */}
+      <AuliLanding />
     </div>
   );
 }

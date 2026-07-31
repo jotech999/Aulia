@@ -14,6 +14,8 @@ const schema = z.object({
   mensaje: z.string().trim().max(1000).optional().or(z.literal("")),
   // Honeypot anti-bot: campo oculto que un humano deja vacío.
   sitio: z.string().max(0).optional(),
+  // Origen del lead: formulario clásico o conversación con Auli.
+  origen: z.enum(["landing", "auli"]).optional(),
 });
 
 type Resultado = { ok: true } | { ok: false; error: string };
@@ -50,7 +52,7 @@ export async function solicitarDemo(input: unknown): Promise<Resultado> {
         cargo: d.cargo || null,
         telefono: d.telefono || null,
         mensaje: d.mensaje || null,
-        origen: "landing",
+        origen: d.origen ?? "landing",
       },
     });
     if (clave) await registrarFallo(clave); // cuenta la solicitud para el límite

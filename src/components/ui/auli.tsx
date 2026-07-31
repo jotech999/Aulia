@@ -1,6 +1,7 @@
 /**
- * AULI — la mascota de Aulia: una pizarrita con marco de madera, ojos que
- * parpadean y sonrisa de tiza. Es el personaje del asistente de IA.
+ * AULI — la mascota de Aulia: una pizarra verde clásica (como las antiguas)
+ * con marco de madera, ojos que parpadean, sonrisa de tiza y su tiza en la
+ * bandeja. Es el personaje del asistente de IA.
  *
  * SVG autocontenido; el parpadeo vive en globals.css (.auli-ojo) y respeta
  * prefers-reduced-motion. Decorativa (aria-hidden): el texto accesible lo
@@ -12,12 +13,27 @@ export function Auli({ className = "h-8 w-8" }: { className?: string }) {
       {/* Marco de madera (ámbar tiza, el acento de la marca) */}
       <rect x="4" y="7" width="56" height="45" rx="9" fill="#e8a34f" />
       <rect x="4" y="7" width="56" height="45" rx="9" fill="url(#auli-madera)" />
-      {/* Pizarra (violeta profundo de la marca) */}
-      <rect x="9.5" y="12.5" width="45" height="34" rx="5.5" fill="#39306b" />
+      {/* Pizarra verde clásica, como las antiguas */}
+      <rect x="9.5" y="12.5" width="45" height="34" rx="5.5" fill="#2f6152" />
+      {/* Borrones de tiza mal borrada (le dan lo "antiguo") */}
+      <path
+        d="M13.5 42.5c6-1.6 12-1.6 17 0"
+        stroke="rgba(253,250,242,0.10)"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M36 16.5c5-1.2 10-1.2 14.5 0"
+        stroke="rgba(253,250,242,0.09)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
       {/* Brillo superior de la pizarra */}
       <path
         d="M14 17.5c9-2.2 22-2.2 28 0"
-        stroke="rgba(255,255,255,0.16)"
+        stroke="rgba(255,255,255,0.14)"
         strokeWidth="2"
         strokeLinecap="round"
         fill="none"
@@ -25,28 +41,31 @@ export function Auli({ className = "h-8 w-8" }: { className?: string }) {
       {/* Ojos (parpadean) */}
       <g className="auli-ojo">
         <ellipse cx="24" cy="27.5" rx="5.4" ry="6.2" fill="#fff" />
-        <circle cx="25.2" cy="28.6" r="2.7" fill="#241d3d" />
+        <circle cx="25.2" cy="28.6" r="2.7" fill="#1c3a31" />
         <circle cx="26.2" cy="27.4" r="0.9" fill="#fff" />
       </g>
       <g className="auli-ojo auli-ojo-2">
         <ellipse cx="40" cy="27.5" rx="5.4" ry="6.2" fill="#fff" />
-        <circle cx="41.2" cy="28.6" r="2.7" fill="#241d3d" />
+        <circle cx="41.2" cy="28.6" r="2.7" fill="#1c3a31" />
         <circle cx="42.2" cy="27.4" r="0.9" fill="#fff" />
       </g>
       {/* Mejillas de tiza */}
-      <circle cx="17.5" cy="35" r="2.6" fill="#ffb84d" opacity="0.35" />
-      <circle cx="46.5" cy="35" r="2.6" fill="#ffb84d" opacity="0.35" />
+      <circle cx="17.5" cy="35" r="2.6" fill="#fdfaf2" opacity="0.35" />
+      <circle cx="46.5" cy="35" r="2.6" fill="#fdfaf2" opacity="0.35" />
       {/* Sonrisa de tiza */}
       <path
         d="M26.5 38.5c3.4 3.1 7.6 3.1 11 0"
-        stroke="#ffedc9"
+        stroke="#fdfaf2"
         strokeWidth="2.4"
         strokeLinecap="round"
         fill="none"
       />
-      {/* Bandeja con tiza */}
+      {/* Bandeja con su tiza blanca */}
       <rect x="9" y="52" width="46" height="5.5" rx="2.75" fill="#c9863c" />
-      <rect x="35" y="49.6" width="9.5" height="3.2" rx="1.6" fill="#fdfaf2" transform="rotate(-7 39.75 51.2)" />
+      <g transform="rotate(-7 40 50.9)">
+        <rect x="34.5" y="49.2" width="11" height="3.4" rx="1.7" fill="#fdfaf2" />
+        <rect x="34.5" y="50.9" width="11" height="1.7" rx="0.85" fill="#e3ddd0" />
+      </g>
       <defs>
         <linearGradient id="auli-madera" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="rgba(255,255,255,0.22)" />

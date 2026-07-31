@@ -815,40 +815,43 @@ export default async function Home() {
         <div className="revelar-scroll mx-auto max-w-6xl px-5 sm:px-8">
           <div className="grid items-start gap-10 lg:grid-cols-[1fr_1fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-marca-600">
+              <p className="text-xs font-bold uppercase tracking-widest text-marca-600">
                 Sostenedores, DAEM y SLEP
               </p>
-              <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-tinta">
-                Pensado para cómo compra de verdad un sostenedor.
+              <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+                Pensado para cómo <span className="texto-degradado">compra de verdad</span> un sostenedor.
               </h2>
-              <p className="mt-4 text-tinta-suave">
+              <p className="mt-4 leading-relaxed text-tinta-suave">
                 La Circular N°30 obliga a tener el libro de clases digital con registro de
                 toda acción y respaldo a cinco años. Nosotros entregamos la evidencia de ese
                 cumplimiento y la documentación que tu unidad de compras necesita, para que
                 el trámite no sea el obstáculo.
               </p>
-              <ul className="mt-6 space-y-3">
+              <ul className="surgir-secuencia mt-7 space-y-3">
                 {[
                   ["Cotización en UF lista para Mercado Público", "Ficha técnica, cotización formal y respaldo de cumplimiento para Compra Ágil o licitación L1, por establecimiento o por la comuna completa."],
                   ["Un contrato para toda la red", "Panel del sostenedor con asistencia, notas, recaudación y alertas de todos tus establecimientos, comparables entre sí. 12% de descuento sobre el total de la red."],
                   ["Implementación por establecimiento, sin cortar el año", "Se puede correr en paralelo con la plataforma actual durante la marcha blanca; la migración de cursos, estudiantes y matrícula la hacemos nosotros."],
                   ["Respaldo y salida sin secuestro de datos", "Exportación completa del libro de clases y de la matrícula cuando quieras, en formato abierto. Tus datos son tuyos, también si te vas."],
-                ].map(([titulo, desc]) => (
-                  <li key={titulo} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-marca-50 text-[11px] font-bold text-marca-600" aria-hidden>
-                      →
+                ].map(([titulo, desc], i) => (
+                  <li
+                    key={titulo}
+                    className="superficie tarjeta-lumen group flex items-start gap-4 rounded-2xl border border-borde p-4 shadow-suave transition-all duration-300 hover:-translate-y-0.5 sm:p-5"
+                  >
+                    <span className="icono-gradiente mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white" aria-hidden>
+                      0{i + 1}
                     </span>
                     <span>
-                      <strong className="block text-sm font-semibold text-tinta">{titulo}</strong>
-                      <span className="text-sm text-tinta-suave">{desc}</span>
+                      <strong className="block font-display text-sm font-semibold tracking-tight text-tinta">{titulo}</strong>
+                      <span className="mt-1 block text-sm leading-relaxed text-tinta-suave">{desc}</span>
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="superficie rounded-3xl p-7">
-              <p className="text-xs font-semibold uppercase tracking-wider text-tinta-tenue">
+            <div className="superficie rounded-3xl border border-borde p-7 shadow-elevada lg:sticky lg:top-8">
+              <p className="text-xs font-bold uppercase tracking-widest text-tinta-tenue">
                 Ejemplo · red de 3 establecimientos
               </p>
               <p className="mt-2 text-sm text-tinta-suave">
@@ -871,9 +874,9 @@ export default async function Home() {
                   );
                 })}
               </ul>
-              <div className="mt-4 rounded-xl bg-marca-50 p-4">
-                <p className="text-xs font-medium text-marca-700">Total anual de la red</p>
-                <p className="cifra mt-0.5 text-2xl text-marca-700">
+              <div className="encabezado-cine relative mt-4 overflow-hidden rounded-xl p-4">
+                <p className="relative text-xs font-medium text-white/70">Total anual de la red</p>
+                <p className="cifra resplandor-dato relative mt-0.5 text-3xl text-white">
                   UF{" "}
                   {formatearUF(
                     Math.round(
@@ -884,7 +887,7 @@ export default async function Home() {
                     ) / 10,
                   )}
                 </p>
-                <p className="mt-0.5 text-xs text-marca-700/70">
+                <p className="relative mt-0.5 text-xs text-white/60">
                   {formatearCLP(
                     [420, 780, 1250].reduce(
                       (s, m) => s + cotizar(PLANES[2], m, { red: true }).clpAnual,
@@ -906,8 +909,9 @@ export default async function Home() {
       </section>
       {/* Preguntas frecuentes */}
       <section className="revelar-scroll mx-auto max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
-        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-tinta">
-          Preguntas frecuentes
+        <p className="text-center text-xs font-bold uppercase tracking-widest text-marca-600">FAQ</p>
+        <h2 className="mt-2 text-center font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          Preguntas <span className="texto-degradado">frecuentes</span>
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
           Lo que suele preguntar la dirección antes de cambiarse.
@@ -916,54 +920,73 @@ export default async function Home() {
           {PREGUNTAS.map((p) => (
             <details
               key={p.q}
-              className="superficie group rounded-xl px-5 py-4 [&_summary]:cursor-pointer"
+              className="superficie group rounded-2xl border border-borde px-5 py-4 shadow-suave transition-all duration-300 open:border-marca-300 open:shadow-elevada hover:border-marca-200 [&_summary]:cursor-pointer"
             >
-              <summary className="flex list-none items-center justify-between gap-3 font-semibold text-tinta marker:content-none">
+              <summary className="flex list-none items-center justify-between gap-3 font-semibold text-tinta transition-colors group-open:text-marca-700 marker:content-none">
                 {p.q}
                 <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-superficie-3 text-tinta-suave transition-transform duration-200 group-open:rotate-45"
+                  className="icono-gradiente flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white transition-transform duration-300 group-open:rotate-45"
                   aria-hidden
                 >
                   +
                 </span>
               </summary>
-              <p className="mt-3 text-sm leading-relaxed text-tinta-suave">{p.a}</p>
+              <p className="animar-surgir mt-3 border-t border-borde pt-3 text-sm leading-relaxed text-tinta-suave">{p.a}</p>
             </details>
           ))}
         </div>
       </section>
 
-      {/* CTA + formulario */}
-      <section id="demo" className="bg-superficie-2 py-16 sm:py-24">
-        <div className="revelar-scroll mx-auto grid max-w-5xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2">
+      {/* CTA + formulario: el gran final, de vuelta al mundo oscuro del héroe */}
+      <section id="demo" className="encabezado-cine malla-academica estrellas relative overflow-hidden py-16 sm:py-24">
+        <span className="aurora-luz aurora-luz-1" aria-hidden />
+        <span className="aurora-luz aurora-luz-2" aria-hidden />
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-acento/60 to-transparent" aria-hidden />
+        <div className="revelar-scroll relative z-10 mx-auto grid max-w-5xl items-center gap-12 px-5 sm:px-8 lg:grid-cols-2">
           <div>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-tinta">Conoce Aulia en una demo</h2>
-            <p className="mt-4 text-tinta-suave">
+            <p className="text-xs font-bold uppercase tracking-widest text-acento">El siguiente paso</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-white sm:text-5xl">
+              Conoce Aulia en una demo
+            </h2>
+            <p className="mt-5 text-lg leading-relaxed text-white/75">
               Te mostramos la plataforma con datos de tu realidad y respondemos tus dudas de implementación,
               migración y precio. Sin compromiso.
             </p>
-            <ul className="mt-6 space-y-2.5 text-sm text-tinta">
+            <ul className="mt-7 space-y-3 text-sm">
               {["Implementación acompañada", "Migración desde tu sistema actual", "Capacitación a tu equipo"].map((t) => (
-                <li key={t} className="flex items-center gap-2.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-marca-50 text-[11px] font-bold text-marca-600">→</span>
+                <li key={t} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-white backdrop-blur transition-colors duration-300 hover:bg-white/10">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-acento text-[11px] font-bold text-marca-900">✓</span>
                   {t}
                 </li>
               ))}
             </ul>
+            <p className="mt-6 text-sm text-white/50">
+              Prueba de 60 días · sin costo de implementación · tus datos siempre son tuyos
+            </p>
           </div>
-          <FormularioDemo />
+          <div className="halo-mockup">
+            <FormularioDemo />
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-borde bg-lienzo">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:px-8 sm:grid-cols-2 lg:grid-cols-4">
+      <footer className="relative bg-lienzo">
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-marca-400/60 to-transparent" aria-hidden />
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-14 sm:px-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
             <Marca />
-            <p className="mt-3 max-w-xs text-sm text-tinta-suave">
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-tinta-suave">
               El libro de clases moderno para colegios chilenos. Rápido, claro y
               hecho para el aula.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {["Circular N°30", "Decreto 67", "SIGE"].map((sello) => (
+                <span key={sello} className="rounded-full border border-borde bg-superficie px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-tinta-suave">
+                  {sello}
+                </span>
+              ))}
+            </div>
           </div>
           {[
             {
@@ -1015,7 +1038,11 @@ export default async function Home() {
         <div className="border-t border-borde">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-tinta-tenue sm:flex-row sm:px-8">
             <p>© {new Date().getUTCFullYear()} Aulia · Gestión escolar para Chile</p>
-            <p>Hecho en Chile, para colegios chilenos.</p>
+            <p className="flex items-center gap-1.5">
+              Hecho en Chile
+              <span aria-hidden>🇨🇱</span>
+              para colegios chilenos.
+            </p>
           </div>
         </div>
       </footer>

@@ -184,25 +184,40 @@ export default async function MiPupiloPage({
       <Link href="/dashboard" className="text-xs text-tinta-tenue hover:text-tinta-suave">
         ← Volver
       </Link>
-      <header className="mt-2 mb-6 flex items-center gap-4">
-        <Avatar nombres={estudiante.nombres} apellidos={estudiante.apellidos} tamano="lg" className="shadow-suave" />
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-tinta">
-            {estudiante.nombres} {estudiante.apellidos}
-          </h1>
-          <p className="mt-0.5 text-sm text-tinta-suave">
-            {curso ? nombreCurso(curso) : "Sin curso activo"}
-          </p>
+      {/* Héroe cinematográfico: el estudiante como protagonista */}
+      <header className="encabezado-cine malla-academica estrellas relative mt-2 mb-5 overflow-hidden rounded-2xl px-6 py-6 shadow-elevada sm:px-8">
+        <span className="aurora-luz aurora-luz-1" aria-hidden />
+        <span className="aurora-luz aurora-luz-2" aria-hidden />
+        <span
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent"
+          aria-hidden
+        />
+        <div className="relative z-10 flex items-center gap-4">
+          <Avatar
+            nombres={estudiante.nombres}
+            apellidos={estudiante.apellidos}
+            tamano="lg"
+            className="shadow-elevada ring-2 ring-white/30"
+          />
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              {estudiante.nombres} {estudiante.apellidos}
+            </h1>
+            <p className="mt-0.5 text-sm text-white/75">
+              {curso ? nombreCurso(curso) : "Sin curso activo"}
+              {curso?.profesorJefe?.nombre ? ` · Prof. jefe: ${curso.profesorJefe.nombre}` : ""}
+            </p>
+          </div>
         </div>
       </header>
 
       {/* Resumen: asistencia + promedio general */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="superficie flex items-center justify-center rounded-xl p-5">
+        <div className="superficie tarjeta-heroe flex items-center justify-center rounded-xl p-5">
           <Medidor valor={resumen.porcentaje} etiqueta="Asistencia" umbral={UMBRAL_ASISTENCIA} />
         </div>
-        <div className="superficie flex flex-col justify-center rounded-xl p-5 sm:col-span-2">
-          <p className="text-sm text-tinta-suave">Promedio general</p>
+        <div className="superficie tarjeta-heroe flex flex-col justify-center rounded-xl p-5 sm:col-span-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-marca-600">Promedio general</p>
           <p className={`mt-1 font-display text-4xl font-bold tabular-nums ${general !== null ? colorNota(general) : "text-tinta"}`}>
             {general !== null ? general.toFixed(1) : "—"}
           </p>

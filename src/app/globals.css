@@ -960,3 +960,25 @@ body {
     color: #999;
   }
 }
+
+/* LIBRETA — feedback de guardado por celda: mientras guarda, la celda respira
+   en el color de la marca; al confirmar, un anillo verde se disuelve. Así la
+   profesora SABE que su nota quedó guardada sin mirar a ningún otro lado. */
+@keyframes celda-guardando-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-marca-500) 35%, transparent); }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-marca-500) 20%, transparent); }
+}
+.celda-guardando {
+  border-color: var(--color-marca-400) !important;
+  animation: celda-guardando-pulso 0.9s ease-in-out infinite;
+}
+@keyframes celda-guardada-ok {
+  0% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-exito-vivo) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-exito-vivo) 0%, transparent); }
+}
+.celda-guardada {
+  animation: celda-guardada-ok 0.9s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .celda-guardando, .celda-guardada { animation: none; }
+}

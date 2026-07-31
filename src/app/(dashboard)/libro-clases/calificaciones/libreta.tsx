@@ -578,12 +578,18 @@ export function Libreta({
                           onFocus={(e) => e.currentTarget.select()}
                           onPaste={(e) => onPasteCelda(e, fila, col)}
                           onBlur={(e) => onBlurCelda(ev.id, est.id, e.target.value)}
-                          className={`${inputAlto} w-14 rounded-lg border text-center tabular-nums outline-none focus:ring-2 focus:ring-marca-500/40 ${
+                          className={`${inputAlto} w-14 rounded-lg border text-center tabular-nums outline-none transition-colors focus:ring-2 focus:ring-marca-500/40 ${
                             estadoCelda === "error"
                               ? "border-peligro bg-peligro-suave text-peligro"
                               : reprobada
                                 ? "border-peligro/40 bg-peligro-suave font-semibold text-peligro"
                                 : "border-borde text-tinta"
+                          } ${
+                            estadoCelda === "guardando"
+                              ? "celda-guardando"
+                              : estadoCelda === "guardado"
+                                ? "celda-guardada"
+                                : ""
                           }`}
                         />
                       </td>

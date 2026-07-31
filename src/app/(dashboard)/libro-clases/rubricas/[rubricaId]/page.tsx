@@ -185,7 +185,19 @@ export default async function DetalleRubricaPage({
         titulo={rubrica.nombre}
         descripcion={`${rubrica.tipo === "RUBRICA" ? "Rúbrica" : "Pauta de cotejo"} · versión ${rubrica.version}`}
         volver={{ href: "/libro-clases/rubricas", etiqueta: "Volver al banco" }}
-        acciones={puedeEditar ? <AccionesRubrica rubricaId={rubrica.id} estado={rubrica.estado} /> : undefined}
+        acciones={
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`/api/rubricas/${rubrica.id}/word`}
+              download
+              className="btn btn-secundario text-sm"
+              title="Descargar como documento Word editable"
+            >
+              ⬇ Descargar Word
+            </a>
+            {puedeEditar && <AccionesRubrica rubricaId={rubrica.id} estado={rubrica.estado} />}
+          </div>
+        }
       />
 
       <section className="mb-5 grid gap-3 sm:grid-cols-3" aria-label="Resumen del instrumento">

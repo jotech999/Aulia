@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requerirSesion } from "@/lib/sesion";
 import { participacionEnHilo } from "@/lib/mensajes";
 import { notificarApoderadosDeEstudiante, crearNotificaciones } from "@/lib/notificaciones";
+import { sugerirRespuestaMensaje, type ResultadoRespuesta } from "@/lib/ia/respuesta-mensaje";
 
 type Resultado = { ok: true } | { ok: false; error: string };
 
@@ -96,4 +97,18 @@ export async function marcarHiloLeido(estudianteId: string): Promise<void> {
     },
     data: { leidoEn: new Date() },
   });
+}
+
+/**
+ * Sugerencia de respuesta con IA para el STAFF del hilo (nunca el apoderado):
+ * valida la participación y delega en el agente, que solo ve el hilo.
+ */
+export async function sugerirRespuesta(estudianteId: string): Promise<ResultadoRespuesta> {
+  const { user } = await requerirSesion();
+  if (user.rol === "APODERADO" || user.rol === "ESTUDIANTE") {
+    return { ok: false, error: "La sugerencia es para el equipo del colegio." };
+  }
+  const part = await participacionEnHilo(user, estudianteId);
+  if (!part) return { ok: false, error: "No puedes conversar sobre este estudiante." };
+  return sugerirRespuestaMensaje({ id: user.id, rol: user.rol, colegioId: user.colegioId }, estudianteId);
 }

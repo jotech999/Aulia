@@ -7,6 +7,8 @@ import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { FormularioReunion } from "./formulario-reunion";
 import { nombreCurso, ordenarCursos } from "@/lib/cursos";
+import { KitReunion } from "./kit-ia";
+import { iaDisponible } from "@/lib/ia/cliente";
 
 const ROLES = new Set(["ADMIN", "DIRECTOR", "UTP", "PROFESOR_JEFE"]);
 
@@ -125,6 +127,8 @@ export default async function ReunionesApoderadosPage({
           ))}
         </div>
       )}
+
+      {curso && <KitReunion cursoId={curso.id} disponible={iaDisponible()} />}
 
       {!curso ? (
         <EstadoVacio icono="comunicacion" titulo="Sin cursos a cargo" descripcion="Cuando tengas una jefatura o cursos autorizados, podrás registrar sus reuniones aquí." />

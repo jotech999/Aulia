@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { enviarMensaje, marcarHiloLeido } from "./acciones";
+import { enviarMensaje, marcarHiloLeido, sugerirRespuesta } from "./acciones";
 
 export type MensajeVista = {
   id: string;
@@ -51,6 +51,17 @@ export function HiloMensajes({
   useEffect(() => {
     finRef.current?.scrollIntoView({ block: "nearest" });
   }, [mensajes.length]);
+
+  const [sugiriendo, setSugiriendo] = useState(false);
+  async function sugerir() {
+    if (sugiriendo) return;
+    setError(null);
+    setSugiriendo(true);
+    const r = await sugerirRespuesta(estudianteId);
+    setSugiriendo(false);
+    if (r.ok) setTexto(r.borrador);
+    else setError(r.error);
+  }
 
   function enviar() {
     if (texto.trim().length === 0) return;
@@ -113,6 +124,17 @@ export function HiloMensajes({
         />
         {error && <p className="mt-1 text-sm text-peligro">{error}</p>}
         <div className="mt-2 flex justify-end">
+          {!soyApoderado && (
+            <button
+              type="button"
+              onClick={() => void sugerir()}
+              disabled={sugiriendo}
+              title="La IA propone una respuesta al último mensaje del apoderado; revísala antes de enviar"
+              className="shrink-0 rounded-lg border border-marca-300 bg-marca-50 px-3 py-2 text-xs font-semibold text-marca-700 transition-colors hover:border-marca-500 disabled:opacity-60"
+            >
+              {sugiriendo ? "Pensando…" : "✨ Sugerir respuesta"}
+            </button>
+          )}
           <button
             type="button"
             onClick={enviar}

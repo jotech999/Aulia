@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { crearAnotacionesLote } from "./actions";
+import { redactarAnotacionIA } from "./ia-actions";
 import { toast } from "@/components/ui/toast";
 
 type Estudiante = { id: string; nombre: string };
@@ -27,6 +28,19 @@ export function AnotacionLote({ cursoId, estudiantes }: { cursoId: string; estud
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [advertencia, setAdvertencia] = useState<string | null>(null);
+  const [redactando, setRedactando] = useState(false);
+
+  // La IA convierte el apunte rápido escrito en el textarea en la anotación
+  // formal objetiva; la persona revisa y puede seguir editando.
+  async function redactarIA() {
+    if (redactando || texto.trim().length < 5) return;
+    setError(null);
+    setRedactando(true);
+    const r = await redactarAnotacionIA({ apunte: texto, tipo });
+    setRedactando(false);
+    if (r.ok) setTexto(r.texto);
+    else setError(r.error);
+  }
 
   function toggle(id: string) {
     setSel((s) => {
@@ -123,7 +137,16 @@ export function AnotacionLote({ cursoId, estudiantes }: { cursoId: string; estud
 
         <label className="mt-3 block text-xs font-medium text-tinta-suave">
           Descripción del hecho
-          <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} maxLength={1000} placeholder="Constata el hecho, sin datos de salud." className={campo} />
+          <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} maxLength={1000} placeholder="Constata el hecho, sin datos de salud. Puedes escribirlo rápido y pulir con IA." className={campo} />
+          <button
+            type="button"
+            onClick={() => void redactarIA()}
+            disabled={redactando || texto.trim().length < 5}
+            title="Convierte tu apunte en la redacción formal y objetiva del libro"
+            className="mt-1.5 rounded-lg border border-marca-300 bg-marca-50 px-3 py-1.5 text-xs font-semibold text-marca-700 transition-colors hover:border-marca-500 disabled:opacity-50"
+          >
+            {redactando ? "Redactando…" : "✨ Redactar formal con IA"}
+          </button>
         </label>
 
         <label className="mt-3 block text-xs font-medium text-tinta-suave">

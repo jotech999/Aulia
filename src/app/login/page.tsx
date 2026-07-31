@@ -167,9 +167,6 @@ export default async function LoginPage({
             </Boton>
           </form>
 
-          <p className="mt-6 rounded-lg bg-superficie-3 px-3 py-2 text-xs text-tinta-tenue">
-            Demo: admin@demo.cl / demo1234
-          </p>
         </div>
       </section>
     </main>

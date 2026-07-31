@@ -114,6 +114,12 @@ export const HERRAMIENTAS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "pendientes_operativos",
+    description:
+      "Pendientes del libro de clases: clases dictadas sin firmar, cursos sin lista pasada hoy y evaluaciones vencidas sin notas. Para docentes muestra SUS pendientes; para dirección/UTP/inspectoría, los del colegio. Úsala cuando pregunten qué falta, qué está pendiente o cómo viene el cierre.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "ficha_estudiante",
     description:
       "Ficha académica mínima de un estudiante (curso, % de asistencia, promedio general, nº de anotaciones negativas). No incluye datos de salud, RUT ni contacto. Requiere el id obtenido de buscar_estudiantes.",
@@ -147,6 +153,8 @@ export async function ejecutarHerramienta(
       return estudiantesDeCurso(user, entrada);
     case "ficha_estudiante":
       return fichaEstudiante(user, entrada);
+    case "pendientes_operativos":
+      return pendientesOperativos(user);
     default:
       return { salida: { error: `Herramienta desconocida: ${nombre}` } };
   }
@@ -458,6 +466,106 @@ async function fichaEstudiante(
       entidad: "Estudiante",
       entidadId: estudiante.id,
       meta: { herramienta: "ficha_estudiante" },
+    },
+  };
+}
+
+// ── Pendientes operativos ─────────────────────────────────────────────────
+
+const ROLES_PENDIENTES_COLEGIO = new Set(["ADMIN", "DIRECTOR", "UTP", "INSPECTOR"]);
+
+/**
+ * Pendientes del libro de clases dentro del alcance del rol: firmas del
+ * leccionario, cursos sin lista hoy (solo gestión) y evaluaciones sumativas
+ * vencidas sin notas. Solo metadatos (curso, asignatura, fechas, conteos).
+ */
+async function pendientesOperativos(user: UsuarioIA): Promise<ResultadoHerramienta> {
+  if (user.rol === "APODERADO" || user.rol === "ESTUDIANTE") {
+    return { salida: { error: "Esta consulta es solo para el equipo del colegio." } };
+  }
+  const esGestion = ROLES_PENDIENTES_COLEGIO.has(user.rol);
+  const filtroDocente = esGestion ? {} : { asignatura: { docenteId: user.id } };
+  const hoy = new Date(`${new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" })}T00:00:00Z`);
+
+  const [sinFirmar, evalsVencidas, cursos, marcasHoy] = await Promise.all([
+    prisma.claseRegistrada.findMany({
+      where: { colegioId: user.colegioId, firmadaEn: null, eliminadaEn: null, ...filtroDocente },
+      select: {
+        fecha: true,
+        asignatura: { select: { nombre: true, curso: { select: { nivel: true, letra: true } } } },
+      },
+      orderBy: { fecha: "asc" },
+      take: 120,
+    }),
+    prisma.evaluacion.findMany({
+      where: {
+        colegioId: user.colegioId,
+        tipo: "SUMATIVA",
+        eliminadaEn: null,
+        fecha: { lt: hoy },
+        calificaciones: { none: { eliminadaEn: null } },
+        ...(esGestion ? {} : { asignatura: { docenteId: user.id } }),
+      },
+      select: {
+        nombre: true,
+        fecha: true,
+        asignatura: { select: { nombre: true, curso: { select: { nivel: true, letra: true } } } },
+      },
+      orderBy: { fecha: "asc" },
+      take: 30,
+    }),
+    esGestion
+      ? prisma.curso.findMany({
+          where: { colegioId: user.colegioId },
+          select: {
+            nivel: true,
+            letra: true,
+            matriculas: { where: { estado: "ACTIVA" }, select: { estudianteId: true } },
+          },
+        })
+      : Promise.resolve([]),
+    esGestion
+      ? prisma.asistenciaDiaria.findMany({
+          where: { colegioId: user.colegioId, fecha: hoy },
+          select: { estudianteId: true },
+          distinct: ["estudianteId"],
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const conMarca = new Set(marcasHoy.map((m) => m.estudianteId));
+  const cursosSinListaHoy = esGestion
+    ? cursos
+        .filter((c) => c.matriculas.length > 0 && !c.matriculas.some((m) => conMarca.has(m.estudianteId)))
+        .map((c) => `${c.nivel} ${c.letra}`)
+    : undefined;
+
+  return {
+    salida: {
+      alcance: esGestion ? "todo el colegio" : "solo tus asignaturas",
+      clasesSinFirmar: {
+        total: sinFirmar.length,
+        detalle: sinFirmar.slice(0, 12).map((c) => ({
+          fecha: c.fecha.toISOString().slice(0, 10),
+          curso: `${c.asignatura.curso.nivel} ${c.asignatura.curso.letra}`,
+          asignatura: c.asignatura.nombre,
+        })),
+      },
+      evaluacionesVencidasSinNotas: {
+        total: evalsVencidas.length,
+        detalle: evalsVencidas.slice(0, 10).map((e) => ({
+          fecha: e.fecha.toISOString().slice(0, 10),
+          curso: `${e.asignatura.curso.nivel} ${e.asignatura.curso.letra}`,
+          asignatura: e.asignatura.nombre,
+          evaluacion: e.nombre,
+        })),
+      },
+      ...(cursosSinListaHoy ? { cursosSinListaHoy } : {}),
+    },
+    auditar: {
+      entidad: "pendientes",
+      entidadId: user.colegioId,
+      meta: { herramienta: "pendientes_operativos" },
     },
   };
 }

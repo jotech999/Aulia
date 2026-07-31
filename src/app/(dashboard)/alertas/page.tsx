@@ -15,6 +15,8 @@ import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { BarraDistribucion } from "@/components/ui/viz";
 import { Intervenciones } from "./intervenciones-cliente";
+import { Centinela } from "./centinela-cliente";
+import { iaDisponible } from "@/lib/ia/cliente";
 import { nombreCurso } from "@/lib/cursos";
 
 const ROLES_GESTION_UTP = ["ADMIN", "DIRECTOR", "UTP", "INSPECTOR"];
@@ -50,6 +52,9 @@ export default async function AlertasPage({
           titulo="Alertas tempranas"
           descripcion="Riesgo de repitencia/deserción por curso, a partir de asistencia, notas y anotaciones ya registradas. Elige un curso."
         />
+        {["ADMIN", "DIRECTOR", "UTP"].includes(user.rol) && (
+          <Centinela disponible={iaDisponible()} />
+        )}
         {cursos.length === 0 ? (
           <EstadoVacio
             icono="alertas"

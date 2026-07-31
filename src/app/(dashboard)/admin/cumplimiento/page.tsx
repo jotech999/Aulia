@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
+import { SimulacroFiscalizacion } from "./fiscalizacion-cliente";
+import { iaDisponible } from "@/lib/ia/cliente";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Insignia } from "@/components/ui/insignia";
 import { TarjetaKPI } from "@/components/ui/tarjeta-kpi";
@@ -128,6 +130,8 @@ export default async function CumplimientoPage() {
           icono="asistencia"
         />
       </section>
+
+      <SimulacroFiscalizacion disponible={iaDisponible()} />
 
       <section className="mt-8" aria-labelledby="evidencias-titulo">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">

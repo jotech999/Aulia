@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { redactarConIA } from "./ia-actions";
 import { useRouter } from "next/navigation";
 import { claveBorradorComunicado, NOMBRE_ALCANCE, type Alcance } from "@/lib/comunicados";
 import { crearComunicado } from "./actions";
@@ -37,6 +38,9 @@ export function CrearComunicado({
   const [estudianteIds, setEstudianteIds] = useState<string[]>([]);
   const [programadoPara, setProgramadoPara] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [ideaIA, setIdeaIA] = useState("");
+  const [redactando, setRedactando] = useState(false);
+  const [errorIA, setErrorIA] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const claveBorrador = claveBorradorComunicado(contextoBorrador);
 
@@ -171,6 +175,49 @@ export function CrearComunicado({
           {plantillas.map((p) => <button key={p.nombre} type="button" onClick={() => { setTitulo(p.titulo); setCuerpo(p.cuerpo); }} className="rounded-full border border-borde px-3 py-1 text-xs font-medium text-tinta-suave hover:bg-superficie-3">{p.nombre}</button>)}
         </div>
       )}
+
+      {/* Redactor con IA: escribe la idea en una línea y el agente entrega el borrador */}
+      <div className="mt-3 rounded-xl border border-marca-200 bg-marca-50/60 p-3">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-marca-700">
+          <span aria-hidden>✨</span> Redactar con IA
+        </p>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={ideaIA}
+            onChange={(e) => setIdeaIA(e.target.value)}
+            placeholder="Escribe la idea: p. ej. reunión de apoderados el jueves 19:00 en el gimnasio, traer libreta"
+            className="w-full rounded-lg border border-borde px-3 py-2 text-sm"
+            maxLength={1200}
+          />
+          <button
+            type="button"
+            disabled={redactando || ideaIA.trim().length < 5}
+            onClick={async () => {
+              setErrorIA(null);
+              setRedactando(true);
+              const res = await redactarConIA({ idea: ideaIA.trim() });
+              setRedactando(false);
+              if (res.ok) {
+                setTitulo(res.titulo);
+                setCuerpo(res.cuerpo);
+              } else {
+                setErrorIA(res.error);
+              }
+            }}
+            className="btn btn-primario shrink-0 disabled:opacity-60"
+          >
+            {redactando ? "Redactando…" : "Generar borrador"}
+          </button>
+        </div>
+        <p className="mt-1.5 text-[11px] text-tinta-tenue">
+          El borrador llena el título y el mensaje; revísalo y edítalo antes de publicar.
+        </p>
+        {errorIA && (
+          <p role="alert" className="mt-2 rounded-lg border border-peligro/20 bg-peligro-suave px-3 py-2 text-xs text-peligro">
+            {errorIA}
+          </p>
+        )}
+      </div>
 
       <input
         value={titulo}

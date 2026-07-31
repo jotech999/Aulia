@@ -904,3 +904,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pop-marca { animation: none; }
 }
+
+/* AULI — la mascota pizarra: parpadeo de ojos. Sutil, cada ~4.5s, con leve
+   desfase entre ojos para que se sienta viva. Guard de reduced-motion. */
+@keyframes auli-parpadeo {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94%, 96% { transform: scaleY(0.08); }
+}
+.auli-ojo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: auli-parpadeo 4.5s ease-in-out infinite;
+}
+.auli-ojo-2 {
+  animation-delay: 0.08s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auli-ojo, .auli-ojo-2 { animation: none; }
+}

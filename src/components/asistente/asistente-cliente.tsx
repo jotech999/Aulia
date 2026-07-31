@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Auli } from "@/components/ui/auli";
 
 type Mensaje = { rol: "user" | "assistant"; texto: string };
 
@@ -41,18 +42,6 @@ const SUGERENCIAS: Record<string, string[]> = {
     "¿En qué curso está mi pupilo?",
   ],
 };
-
-function IconoIA({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path
-        d="M12 3l1.6 4.2L18 8.8l-4.4 1.6L12 15l-1.6-4.6L6 8.8l4.4-1.6L12 3Z"
-        fill="currentColor"
-      />
-      <path d="M18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" fill="currentColor" opacity=".6" />
-    </svg>
-  );
-}
 
 export function Asistente({
   rol,
@@ -117,12 +106,12 @@ export function Asistente({
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
-        aria-label="Abrir asistente de IA"
+        aria-label="Abrir a Auli, el asistente de Aulia"
         aria-expanded={abierto}
-        className="encabezado-cine fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-flotante transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-marca-300"
+        className="encabezado-cine fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full py-2.5 pl-2.5 pr-4 text-sm font-semibold text-white shadow-flotante transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-marca-300"
       >
-        <IconoIA />
-        <span className="hidden sm:inline">Asistente</span>
+        <Auli className="h-9 w-9 drop-shadow-sm" />
+        <span className="hidden sm:inline">Auli</span>
       </button>
 
       {/* Panel */}
@@ -135,18 +124,16 @@ export function Asistente({
           />
           <aside
             role="dialog"
-            aria-label="Asistente de IA"
+            aria-label="Auli, el asistente de Aulia"
             className="animar-surgir fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col rounded-t-2xl border border-borde bg-superficie shadow-flotante md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:rounded-none md:rounded-l-2xl"
           >
             {/* Encabezado */}
             <header className="encabezado-cine flex items-center justify-between rounded-t-2xl px-5 py-4 md:rounded-none md:rounded-tl-2xl">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                  <IconoIA />
-                </span>
+                <Auli className="h-10 w-10 drop-shadow-sm" />
                 <div>
-                  <p className="font-display text-sm font-bold text-white">Asistente Aulia</p>
-                  <p className="text-xs text-white/70">Consulta y borradores</p>
+                  <p className="font-display text-sm font-bold text-white">Auli</p>
+                  <p className="text-xs text-white/70">Tu pizarra asistente · consulta y borradores</p>
                 </div>
               </div>
               <button
@@ -166,8 +153,9 @@ export function Asistente({
               {mensajes.length === 0 && (
                 <div>
                   <p className="text-sm text-tinta-suave">
-                    Hola{nombre ? `, ${nombre.split(" ")[0]}` : ""}. Puedo ayudarte a
-                    consultar asistencia, alertas y estudiantes, o a redactar borradores.
+                    ¡Hola{nombre ? `, ${nombre.split(" ")[0]}` : ""}! Soy Auli. Puedo ayudarte a
+                    consultar asistencia, alertas y estudiantes, redactar borradores o guiarte
+                    por la plataforma.
                   </p>
                   <div className="mt-4 space-y-2">
                     {sugerencias.map((s) => (

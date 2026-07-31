@@ -40,7 +40,7 @@ function ahoraSantiago(): { dia: number; min: number } {
   };
 }
 
-type Pop = { b: BloqueVista; x: number; y: number } | null;
+type Pop = { b: BloqueVista } | null;
 
 export function GrillaHorario({
   filas,
@@ -72,19 +72,6 @@ export function GrillaHorario({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // El popover es position:fixed (anclado a coordenadas de pantalla): si la
-  // página o el marco hacen scroll, quedaría flotando lejos de su bloque.
-  // Se cierra ante cualquier scroll o cambio de tamaño.
-  useEffect(() => {
-    if (!pop) return;
-    const cerrar = () => setPop(null);
-    window.addEventListener("scroll", cerrar, { capture: true, passive: true });
-    window.addEventListener("resize", cerrar);
-    return () => {
-      window.removeEventListener("scroll", cerrar, { capture: true });
-      window.removeEventListener("resize", cerrar);
-    };
-  }, [pop]);
 
   const hoy = ahora.dia;
   const esDiaLaboral = hoy >= 1 && hoy <= 5;
@@ -127,13 +114,8 @@ export function GrillaHorario({
   const enCurso = bloquesHoy.find((b) => estadoBloque(b) === "ahora");
   const lineaAhoraVisible = esDiaLaboral && ahora.min >= minEje && ahora.min <= maxEje;
 
-  function abrirPop(e: React.MouseEvent, b: BloqueVista) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    // Anclado bajo el bloque; el popover es position:fixed (sobrevive al scroll
-    // horizontal del marco). Se ajusta para no salirse de la ventana.
-    const x = Math.min(Math.max(r.left + r.width / 2, 130), window.innerWidth - 130);
-    const y = Math.min(r.bottom + 6, window.innerHeight - 240);
-    setPop((p) => (p?.b === b ? null : { b, x, y }));
+  function abrirPop(_e: React.MouseEvent, b: BloqueVista) {
+    setPop((p) => (p?.b === b ? null : { b }));
   }
 
   const fmtHora = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -351,6 +333,50 @@ export function GrillaHorario({
                         Día libre
                       </span>
                     )}
+
+                    {/* Popover de acciones: anclado al bloque dentro de su
+                        columna (viaja con el scroll; sin transform animado
+                        que lo descentre). */}
+                    {pop && pop.b.dia === dia && (() => {
+                      const bTop = (aMin(pop.b.horaInicio) - minEje) * PX_POR_MIN;
+                      const bBot = (aMin(pop.b.horaFin) - minEje) * PX_POR_MIN;
+                      const ALTO_POP = conAcciones ? 236 : 72;
+                      const cabeAbajo = bBot + 6 + ALTO_POP <= altoEje;
+                      const top = cabeAbajo ? bBot + 6 : Math.max(bTop - ALTO_POP - 6, 0);
+                      const lado = dia <= 2 ? "left-0" : dia >= 4 ? "right-0" : "left-1/2 -translate-x-1/2";
+                      return (
+                        <div
+                          role="dialog"
+                          aria-label={`Acciones de ${pop.b.asignatura}`}
+                          className={`absolute z-40 w-56 rounded-xl border border-borde bg-superficie p-3 shadow-flotante ${lado}`}
+                          style={{ top: `${top}px` }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-8 w-1.5 shrink-0 rounded-full ${colorAsignatura(pop.b.asignatura, pop.b.color).punto}`}
+                              aria-hidden
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-tinta">{pop.b.asignatura}</p>
+                              <p className="text-xs tabular-nums text-tinta-tenue">
+                                {pop.b.horaInicio}–{pop.b.horaFin}
+                                {pop.b.curso ? ` · ${pop.b.curso}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                          {conAcciones && (
+                            <div className="mt-2.5 space-y-1">
+                              {pop.b.cursoId && (
+                                <AccionBloque href={`/libro-clases/asistencia?cursoId=${pop.b.cursoId}`} etiqueta="Pasar lista" />
+                              )}
+                              <AccionBloque href={`/libro-clases/calificaciones?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Libreta de notas" />
+                              <AccionBloque href={`/libro-clases/firma?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Firmar leccionario" />
+                              <AccionBloque href={`/libro-clases/evaluaciones?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Evaluaciones" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -375,47 +401,15 @@ export function GrillaHorario({
         </div>
       )}
 
-      {/* Popover de acciones (fijo: sobrevive al scroll del marco) */}
+      {/* Telón transparente: clic fuera cierra el popover */}
       {pop && (
-        <>
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={() => setPop(null)}
-            className="fixed inset-0 z-30 cursor-default"
-            tabIndex={-1}
-          />
-          <div
-            role="dialog"
-            aria-label={`Acciones de ${pop.b.asignatura}`}
-            className="animar-surgir fixed z-40 w-60 -translate-x-1/2 rounded-xl border border-borde bg-superficie p-3 shadow-flotante"
-            style={{ left: pop.x, top: pop.y }}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={`h-8 w-1.5 shrink-0 rounded-full ${colorAsignatura(pop.b.asignatura, pop.b.color).punto}`}
-                aria-hidden
-              />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-tinta">{pop.b.asignatura}</p>
-                <p className="text-xs tabular-nums text-tinta-tenue">
-                  {pop.b.horaInicio}–{pop.b.horaFin}
-                  {pop.b.curso ? ` · ${pop.b.curso}` : ""}
-                </p>
-              </div>
-            </div>
-            {conAcciones && (
-              <div className="mt-2.5 space-y-1">
-                {pop.b.cursoId && (
-                  <AccionBloque href={`/libro-clases/asistencia?cursoId=${pop.b.cursoId}`} etiqueta="Pasar lista" />
-                )}
-                <AccionBloque href={`/libro-clases/calificaciones?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Libreta de notas" />
-                <AccionBloque href={`/libro-clases/firma?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Firmar leccionario" />
-                <AccionBloque href={`/libro-clases/evaluaciones?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Evaluaciones" />
-              </div>
-            )}
-          </div>
-        </>
+        <button
+          type="button"
+          aria-label="Cerrar"
+          onClick={() => setPop(null)}
+          className="fixed inset-0 z-30 cursor-default"
+          tabIndex={-1}
+        />
       )}
     </div>
   );

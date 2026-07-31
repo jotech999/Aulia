@@ -153,26 +153,24 @@ export function NavEscritorio({
                   href={item.href}
                   prefetch
                   aria-current={activo ? "page" : undefined}
-                  className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                  className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     activo
-                      ? "bg-marca-50 text-marca-700"
-                      : "text-tinta-suave hover:bg-superficie-3 hover:text-tinta"
+                      ? "bg-gradient-to-r from-marca-600 to-marca-500 text-white shadow-suave"
+                      : "text-tinta-suave hover:translate-x-0.5 hover:bg-superficie-3 hover:text-tinta"
                   }`}
                 >
-                  {activo && (
-                    <span
-                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-marca-600"
-                      aria-hidden
-                    />
-                  )}
                   <Icono
-                    className={`h-[18px] w-[18px] shrink-0 ${
-                      activo ? "text-marca-600" : "text-tinta-tenue group-hover:text-tinta-suave"
+                    className={`h-[18px] w-[18px] shrink-0 transition-colors ${
+                      activo ? "text-white" : "text-tinta-tenue group-hover:text-marca-600"
                     }`}
                   />
                   <span className="flex-1">{item.etiqueta}</span>
                   {(badges?.[item.href] ?? 0) > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-marca-600 px-1.5 text-[11px] font-bold text-white">
+                    <span
+                      className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                        activo ? "bg-white text-marca-700" : "bg-marca-600 text-white"
+                      }`}
+                    >
                       {badges![item.href] > 9 ? "9+" : badges![item.href]}
                     </span>
                   )}

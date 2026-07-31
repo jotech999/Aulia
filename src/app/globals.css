@@ -869,3 +869,24 @@ body {
   }
   .texto-vivo { color: var(--color-acento, #fcd34d); background: none; }
 }
+
+/* ==========================================================================
+   Plataforma · Ola 1: tarjeta héroe de KPI con marco luminoso permanente.
+   Reusa el lenguaje de la calculadora de la landing dentro del dashboard.
+   ========================================================================== */
+.tarjeta-heroe {
+  border-color: transparent !important;
+  background-image:
+    linear-gradient(var(--color-superficie), var(--color-superficie)),
+    linear-gradient(120deg, var(--color-marca-400), var(--color-acento, #fcd34d) 50%, var(--color-marca-400));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    0 10px 32px -14px color-mix(in srgb, var(--color-marca-500) 45%, transparent),
+    0 2px 8px -2px color-mix(in srgb, var(--color-marca-500) 18%, transparent);
+}
+.tarjeta-heroe:hover {
+  box-shadow:
+    0 16px 40px -14px color-mix(in srgb, var(--color-marca-500) 55%, transparent),
+    0 2px 8px -2px color-mix(in srgb, var(--color-marca-500) 22%, transparent);
+}

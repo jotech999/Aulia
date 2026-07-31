@@ -12,8 +12,8 @@ import { Iconos, type NombreIcono } from "@/components/ui/iconos";
 type Tono = "neutro" | "marca" | "alerta" | "peligro";
 
 const TONO_ICONO: Record<Tono, string> = {
-  neutro: "bg-marca-50 text-marca-600",
-  marca: "bg-marca-50 text-marca-600",
+  neutro: "icono-gradiente text-white shadow-suave",
+  marca: "icono-gradiente text-white shadow-suave",
   alerta: "bg-alerta-suave text-alerta",
   peligro: "bg-peligro-suave text-peligro",
 };
@@ -48,9 +48,9 @@ export function TarjetaKPI({
 }) {
   const Icono = icono ? Iconos[icono] : null;
   const base = [
-    "superficie superficie-realce flex flex-col rounded-xl",
-    destacado ? "acento-superior p-5 sm:p-6" : "p-5",
-    href ? "tarjeta-int" : "",
+    "superficie superficie-realce flex flex-col rounded-xl transition-all duration-300",
+    destacado ? "tarjeta-heroe p-5 sm:p-6" : "p-5",
+    href ? "tarjeta-int hover:-translate-y-0.5" : "hover:-translate-y-0.5 hover:shadow-elevada",
     className ?? "",
   ]
     .filter(Boolean)
@@ -71,8 +71,8 @@ export function TarjetaKPI({
       </div>
 
       <p
-        className={`cifra mt-3 ${destacado ? "text-[2.6rem] sm:text-5xl" : "text-3xl"} ${
-          valorPeligro ? "text-peligro" : "text-tinta"
+        className={`cifra mt-3 ${destacado ? "text-[2.6rem] tracking-tight sm:text-5xl" : "text-3xl"} ${
+          valorPeligro ? "text-peligro" : destacado ? "texto-degradado" : "text-tinta"
         }`}
       >
         {valor}

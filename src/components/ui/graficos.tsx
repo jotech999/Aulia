@@ -114,11 +114,19 @@ export function Histograma({
   alto?: number;
   etiqueta?: string;
 }) {
+  const id = useId().replace(/:/g, "");
   const reducir = usePrefiereMenosMovimiento();
   return (
     <div role="img" aria-label={etiqueta}>
       <ResponsiveContainer width="100%" height={alto}>
         <BarChart data={datos} margin={{ top: 8, right: 4, bottom: 0, left: -18 }}>
+          <defs>
+            {/* Degradado de marca para barras sin color propio (mismo lenguaje del héroe de la landing) */}
+            <linearGradient id={`hg-${id}`} x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor="var(--color-marca-500)" />
+              <stop offset="100%" stopColor="var(--color-marca-300)" />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} stroke={BORDE} strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
@@ -143,7 +151,7 @@ export function Histograma({
             animationEasing={CURVA_ENTRADA}
           >
             {datos.map((d, i) => (
-              <Cell key={i} fill={d.color ?? VERDE} />
+              <Cell key={i} fill={d.color ?? `url(#hg-${id})`} />
             ))}
           </Bar>
         </BarChart>
@@ -178,7 +186,7 @@ export function LineaArea({
         <AreaChart data={datos} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id={`la-${id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -206,7 +214,7 @@ export function LineaArea({
             fill={`url(#la-${id})`}
             connectNulls
             dot={{ r: 3, fill: color, strokeWidth: 0 }}
-            activeDot={{ r: 5 }}
+            activeDot={{ r: 5.5, stroke: "var(--color-superficie)", strokeWidth: 2 }}
             isAnimationActive={!reducir}
             animationDuration={900}
             animationEasing={CURVA_ENTRADA}

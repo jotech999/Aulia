@@ -127,7 +127,7 @@ export default async function DashboardLayout({
         Saltar al contenido
       </a>
       {/* Barra lateral (escritorio) */}
-      <aside data-noprint className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-borde bg-superficie px-3 py-5 md:flex">
+      <aside data-noprint className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-borde bg-gradient-to-b from-superficie via-superficie to-marca-50/60 px-3 py-5 md:flex">
         <div className="mb-6 flex items-center gap-2.5 px-2">
           {logoColegio ? (
             // eslint-disable-next-line @next/next/no-img-element

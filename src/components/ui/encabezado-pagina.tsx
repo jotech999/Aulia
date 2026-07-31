@@ -34,18 +34,22 @@ export function EncabezadoPagina({
         <div className={`flex items-start gap-3 ${volver ? "mt-1.5" : ""}`}>
           {Icono && (
             <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-marca-50 text-marca-600"
+              className="icono-gradiente flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-suave"
               aria-hidden
             >
               <Icono className="h-[22px] w-[22px]" />
             </span>
           )}
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-tinta">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-tinta sm:text-[1.7rem]">
               {titulo}
             </h1>
+            <span
+              className="mt-1.5 block h-1 w-10 rounded-full bg-gradient-to-r from-marca-500 to-acento"
+              aria-hidden
+            />
             {descripcion && (
-              <p className="mt-1 max-w-2xl text-sm text-tinta-suave">{descripcion}</p>
+              <p className="mt-2 max-w-2xl text-sm text-tinta-suave">{descripcion}</p>
             )}
           </div>
         </div>

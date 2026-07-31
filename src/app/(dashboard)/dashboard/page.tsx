@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requerirSesion } from "@/lib/sesion";
 import { formatearFechaLarga, hoyEnSantiago, fechaDesdeISO } from "@/lib/fecha";
 import { Iconos } from "@/components/ui/iconos";
-import { NOTA_APROBACION } from "@/lib/calificaciones";
+import { NOTA_APROBACION, calcularPromedio, promedioGeneral, type ItemPromedio } from "@/lib/calificaciones";
 import { ESTILO_EVENTO, type TipoEventoVista } from "@/lib/calendario";
 import { PanelDireccion } from "./panel-direccion";
 import { PanelProfesor } from "./panel-profesor";
@@ -126,6 +126,53 @@ async function PanelApoderado({
         take: 25,
       })
     : [];
+
+  // Promedios por asignatura de cada pupilo (solo sumativas ponderan).
+  const asignaturasPupilos = cursoIds.length
+    ? await prisma.asignatura.findMany({
+        where: { colegioId, cursoId: { in: cursoIds } },
+        select: {
+          nombre: true,
+          cursoId: true,
+          evaluaciones: {
+            where: { eliminadaEn: null, tipo: "SUMATIVA" },
+            select: {
+              ponderacion: true,
+              calificaciones: {
+                where: { estudianteId: { in: pupiloIds }, eliminadaEn: null },
+                select: { estudianteId: true, nota: true, eximida: true },
+              },
+            },
+          },
+        },
+        orderBy: { nombre: "asc" },
+      })
+    : [];
+  const promediosPorPupilo = pupilos.map((p) => {
+    const cursoId = cursoPorPupilo.get(p.id)?.id;
+    const porAsignatura = asignaturasPupilos
+      .filter((a) => a.cursoId === cursoId)
+      .map((a) => {
+        const items: ItemPromedio[] = a.evaluaciones.map((e) => {
+          const cal = e.calificaciones.find((c) => c.estudianteId === p.id);
+          return {
+            nota: cal?.eximida ? null : cal?.nota ?? null,
+            ponderacion: e.ponderacion,
+            computa: !cal?.eximida,
+          };
+        });
+        return { asignatura: a.nombre, promedio: calcularPromedio(items).promedio };
+      })
+      .filter((a) => a.promedio !== null);
+    return {
+      pupiloId: p.id,
+      pupilo: p.nombres.split(" ")[0],
+      porAsignatura,
+      general: promedioGeneral(
+        porAsignatura.map((a) => a.promedio).filter((x): x is number => x !== null)
+      ),
+    };
+  }).filter((r) => r.porAsignatura.length > 0);
 
   // Próximas evaluaciones (fecha futura): lo que un apoderado más quiere saber.
   const hoyISO = hoyEnSantiago();
@@ -274,6 +321,54 @@ async function PanelApoderado({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Promedios por asignatura de cada pupilo */}
+      {promediosPorPupilo.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-semibold tracking-tight">Promedios por asignatura</h2>
+          <div className="mt-3 space-y-3">
+            {promediosPorPupilo.map((r) => (
+              <Link
+                key={r.pupiloId}
+                href={`/mi-pupilo/${r.pupiloId}`}
+                className="superficie tarjeta-int block rounded-xl p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-tinta">{r.pupilo}</p>
+                  {r.general !== null && (
+                    <span
+                      className={`rounded-lg px-2.5 py-1 font-display text-sm font-bold tabular-nums ${
+                        r.general >= NOTA_APROBACION
+                          ? "bg-exito-suave text-exito"
+                          : "bg-peligro-suave text-peligro"
+                      }`}
+                    >
+                      General {r.general.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {r.porAsignatura.map((a) => (
+                    <div
+                      key={a.asignatura}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-borde bg-superficie-2 px-2.5 py-1.5"
+                    >
+                      <span className="truncate text-xs font-medium text-tinta-suave">{a.asignatura}</span>
+                      <span
+                        className={`font-display text-sm font-bold tabular-nums ${
+                          (a.promedio as number) >= NOTA_APROBACION ? "text-exito" : "text-peligro"
+                        }`}
+                      >
+                        {(a.promedio as number).toFixed(1)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
       )}
 

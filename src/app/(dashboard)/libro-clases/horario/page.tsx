@@ -2,13 +2,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requerirSesion } from "@/lib/sesion";
 import { whereAsignaturasFirma } from "../firma/consultas";
-import { construirHorario, DIAS_LABORALES, NOMBRE_DIA, type BloqueVista } from "@/lib/horario";
+import { construirHorario, type BloqueVista } from "@/lib/horario";
 import { colorAsignatura } from "@/lib/colores-asignatura";
-import { diaSemanaHoySantiago, fechaDesdeISO, hoyEnSantiago, isoDesdeFecha } from "@/lib/fecha";
+import { fechaDesdeISO, hoyEnSantiago, isoDesdeFecha } from "@/lib/fecha";
 import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { BotonImprimir } from "@/components/ui/boton-imprimir";
 import { EditorHorario } from "./editor-horario";
+import { GrillaHorario } from "./grilla-horario";
 import { VersionesHorario } from "./versiones-horario";
 import { SelectorDocente } from "./selector-docente";
 import { nombreCurso } from "@/lib/cursos";
@@ -117,13 +118,14 @@ export default async function HorarioPage({
           horaFin: b.horaFin,
           asignaturaId: a.id,
           asignatura: a.nombre,
+          cursoId: a.curso.id,
           color: a.color,
           curso: nombreCurso(a.curso),
         }))
     );
 
   const filas = construirHorario(bloques);
-  const hoy = diaSemanaHoySantiago();
+
   // Mostrar el nombre del curso dentro de la celda solo cuando la vista mezcla
   // varios cursos (semana personal del docente sin filtrar).
   const mostrarCurso = cursoSel === null && cursos.length > 1;
@@ -248,71 +250,12 @@ export default async function HorarioPage({
           descripcion="Cuando el colegio configure los bloques horarios de las asignaturas, tu semana aparecerá aquí."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-borde bg-superficie shadow-suave">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-borde">
-                <th className="sticky left-0 z-10 w-16 bg-superficie px-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-tinta-tenue">
-                  Hora
-                </th>
-                {DIAS_LABORALES.map((dia) => (
-                  <th
-                    key={dia}
-                    className={`px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wide ${
-                      dia === hoy ? "bg-marca-50 text-marca-700" : "text-tinta-tenue"
-                    }`}
-                  >
-                    {NOMBRE_DIA[dia]}
-                    {dia === hoy && <span className="ml-1 text-marca-500">hoy</span>}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((fila) => (
-                <tr
-                  key={fila.horaInicio}
-                  className="border-b border-borde transition-colors last:border-0 hover:bg-superficie-2/60"
-                >
-                  <td className="sticky left-0 z-10 whitespace-nowrap bg-superficie px-2 py-2 align-top text-xs tabular-nums text-tinta-tenue">
-                    <div className="font-semibold text-tinta-suave">{fila.horaInicio}</div>
-                    <div>{fila.horaFin}</div>
-                  </td>
-                  {fila.celdas.map((celda, i) => {
-                    const esHoy = DIAS_LABORALES[i] === hoy;
-                    return (
-                      <td
-                        key={i}
-                        className={`px-1.5 py-1.5 align-top transition-colors ${esHoy ? "border-x border-marca-200/60 bg-marca-50/60" : ""}`}
-                      >
-                        {celda ? (
-                          <Link
-                            href={`/libro-clases/firma?asignaturaId=${celda.asignaturaId}`}
-                            title={`Ir al leccionario de ${celda.asignatura}`}
-                            className={`block rounded-lg px-2 py-1.5 text-xs leading-tight transition-all duration-150 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-md hover:ring-2 hover:ring-marca-300 active:scale-[0.98] ${colorAsignatura(celda.asignatura, celda.color).suave}`}
-                          >
-                            <div className="font-semibold">{celda.asignatura}</div>
-                            {mostrarCurso && celda.curso && (
-                              <div className="opacity-70">{celda.curso}</div>
-                            )}
-                          </Link>
-                        ) : (
-                          mostrarHorasLibres ? (
-                            <span className="block rounded-lg border border-dashed border-borde px-2 py-2 text-center text-[11px] font-medium text-tinta-tenue">
-                              Hora libre
-                            </span>
-                          ) : (
-                            <span className="sr-only">Libre</span>
-                          )
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <GrillaHorario
+          filas={filas}
+          mostrarCurso={mostrarCurso}
+          mostrarHorasLibres={mostrarHorasLibres}
+          conAcciones={esDocente || puedeEditar}
+        />
       )}
         </>
       )}

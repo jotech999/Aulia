@@ -11,6 +11,7 @@ export type BloqueVista = {
   horaFin: string; // "HH:MM"
   asignaturaId: string;
   asignatura: string;
+  cursoId?: string;
   color: string | null; // clave de paleta (ver colores-asignatura.ts)
   curso?: string;
 };

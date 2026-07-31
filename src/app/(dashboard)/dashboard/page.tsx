@@ -259,7 +259,7 @@ async function PanelApoderado({
           </div>
           <ul className="mt-3 space-y-2">
             {eventos.map((e, i) => (
-              <li key={i} className="superficie flex items-center gap-3 rounded-xl p-4">
+              <li key={i} className="superficie tarjeta-int flex items-center gap-3 rounded-xl p-4">
                 <span className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-superficie-3 text-tinta-suave">
                   <span className="text-sm font-bold leading-none tabular-nums">{fmtDia(e.fecha).split(" ")[0]}</span>
                   <span className="text-[10px] uppercase leading-none">{fmtDia(e.fecha).split(" ")[1]}</span>
@@ -283,8 +283,8 @@ async function PanelApoderado({
           <h2 className="font-display text-lg font-semibold tracking-tight">Próximas evaluaciones</h2>
           <ul className="mt-3 space-y-2">
             {proximas.map((p) => (
-              <li key={p.clave} className="superficie flex items-center gap-3 rounded-xl p-4">
-                <span className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-marca-50 text-marca-700">
+              <li key={p.clave} className="superficie tarjeta-int flex items-center gap-3 rounded-xl p-4">
+                <span className="chip-gradiente flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg">
                   <span className="text-sm font-bold leading-none tabular-nums">{fmtDia(p.fecha).split(" ")[0]}</span>
                   <span className="text-[10px] uppercase leading-none">{fmtDia(p.fecha).split(" ")[1]}</span>
                 </span>
@@ -320,8 +320,8 @@ async function PanelApoderado({
         ) : (
           <ul className="mt-3 space-y-2">
             {novedades.map((n) => (
-              <li key={n.clave} className="superficie flex items-center gap-3 rounded-xl p-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-marca-50 text-marca-600">
+              <li key={n.clave} className="superficie tarjeta-int flex items-center gap-3 rounded-xl p-4">
+                <span className="chip-gradiente flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
                   <Iconos.calificaciones className="h-[18px] w-[18px]" />
                 </span>
                 <div className="min-w-0 flex-1">

@@ -83,8 +83,8 @@
 
   /* Sombras teñidas de violeta: una sombra gris sobre una interfaz lila se ve
      sucia. Coherentes con una única fuente de luz superior. */
-  --shadow-suave: 0 1px 2px rgba(56, 32, 106, 0.05), 0 1px 3px rgba(56, 32, 106, 0.08);
-  --shadow-elevada: 0 6px 18px -6px rgba(56, 32, 106, 0.16), 0 2px 6px -2px rgba(56, 32, 106, 0.09);
+  --shadow-suave: 0 1px 2px rgba(56, 32, 106, 0.07), 0 3px 8px -2px rgba(56, 32, 106, 0.09);
+  --shadow-elevada: 0 12px 28px -10px rgba(56, 32, 106, 0.20), 0 3px 8px -3px rgba(56, 32, 106, 0.10);
   --shadow-flotante: 0 22px 44px -12px rgba(56, 32, 106, 0.26);
 
   /* Movimiento controlado (160–240 ms) */
@@ -97,8 +97,9 @@ body {
   /* Lienzo blanco con iluminación lila muy tenue: lila arriba-derecha,
      un toque ámbar arriba-izquierda para que no quede frío. */
   background:
-    radial-gradient(90% 60% at 100% 0%, rgba(138, 95, 228, 0.07), transparent 60%),
-    radial-gradient(70% 50% at 0% 0%, rgba(255, 184, 77, 0.05), transparent 55%),
+    radial-gradient(90% 60% at 100% 0%, rgba(138, 95, 228, 0.10), transparent 60%),
+    radial-gradient(70% 50% at 0% 0%, rgba(255, 184, 77, 0.07), transparent 55%),
+    radial-gradient(80% 45% at 50% 100%, rgba(138, 95, 228, 0.05), transparent 60%),
     var(--color-lienzo);
   background-attachment: fixed;
   color: var(--color-tinta);
@@ -981,4 +982,45 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .celda-guardando, .celda-guardada { animation: none; }
+}
+
+/* ==========================================================================
+   Ola de interfaz · el "marco" de la plataforma
+   ========================================================================== */
+
+/* Gránulo finísimo sobre el lienzo: quita lo "plano digital" sin notarse. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.045'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Barra superior de vidrio: translúcida, saturada, con línea inferior fina. */
+.topbar-vidrio {
+  background: color-mix(in srgb, var(--color-superficie) 62%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-borde) 80%, transparent);
+}
+
+/* Ítem activo de la navegación: gradiente con brillo interior y sombra. */
+.nav-activa {
+  background: linear-gradient(120deg, var(--color-marca-600), var(--color-marca-500) 70%, var(--color-marca-400));
+  box-shadow:
+    var(--shadow-suave),
+    0 6px 16px -6px color-mix(in srgb, var(--color-marca-500) 55%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* Chip de fecha/ícono con gradiente de marca para listas. */
+.chip-gradiente {
+  background: linear-gradient(135deg, var(--color-marca-600), var(--color-marca-400));
+  color: #fff;
+  box-shadow:
+    0 4px 10px -3px color-mix(in srgb, var(--color-marca-500) 50%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }

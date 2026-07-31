@@ -156,13 +156,13 @@ export function NavEscritorio({
                   aria-current={activo ? "page" : undefined}
                   className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     activo
-                      ? "bg-gradient-to-r from-marca-600 to-marca-500 text-white shadow-suave"
-                      : "text-tinta-suave hover:translate-x-0.5 hover:bg-superficie-3 hover:text-tinta"
+                      ? "nav-activa text-white"
+                      : "text-tinta-suave hover:translate-x-0.5 hover:bg-marca-50 hover:text-tinta"
                   }`}
                 >
                   <Icono
                     className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-                      activo ? "text-white" : "text-tinta-tenue group-hover:text-marca-600"
+                      activo ? "text-white" : "text-marca-400 group-hover:text-marca-600"
                     }`}
                   />
                   <span className="flex-1">{item.etiqueta}</span>

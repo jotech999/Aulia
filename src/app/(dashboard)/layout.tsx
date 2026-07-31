@@ -128,7 +128,7 @@ export default async function DashboardLayout({
         Saltar al contenido
       </a>
       {/* Barra lateral (escritorio) */}
-      <aside data-noprint className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-borde bg-gradient-to-b from-superficie via-superficie to-marca-50/60 px-3 py-5 md:flex">
+      <aside data-noprint className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-borde bg-gradient-to-b from-superficie via-marca-50/25 to-marca-100/40 px-3 py-5 md:flex">
         <div className="mb-6 flex items-center gap-2.5 px-2">
           {logoColegio ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -172,7 +172,7 @@ export default async function DashboardLayout({
 
       <div className="min-w-0 flex-1">
         {/* Barra superior (escritorio): buscador global visible + notificaciones */}
-        <header data-noprint className="sticky top-0 z-20 hidden items-center gap-4 border-b border-borde bg-superficie/80 px-6 py-2.5 backdrop-blur md:flex">
+        <header data-noprint className="topbar-vidrio sticky top-0 z-20 hidden items-center gap-4 px-6 py-2.5 md:flex">
           <div className="w-full max-w-sm">
             <BotonPaleta />
           </div>
@@ -191,7 +191,7 @@ export default async function DashboardLayout({
         </header>
 
         {/* Barra superior (móvil) */}
-        <header data-noprint className="sticky top-0 z-10 border-b border-borde bg-superficie/95 backdrop-blur md:hidden">
+        <header data-noprint className="topbar-vidrio sticky top-0 z-10 md:hidden">
           <div className="flex items-center justify-between gap-2 px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-1">
               <MenuMovil rol={rol} colegioNombre={sesion.user.colegioNombre} badges={badgesNav} />

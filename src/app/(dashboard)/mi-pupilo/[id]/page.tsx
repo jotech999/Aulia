@@ -354,8 +354,8 @@ export default async function MiPupiloPage({
           <h2 className="font-display text-lg font-semibold tracking-tight">Próximas evaluaciones</h2>
           <ul className="mt-3 space-y-2">
             {proximas.map((p, i) => (
-              <li key={i} className="superficie flex items-center gap-3 rounded-xl p-4">
-                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-marca-50 text-marca-700">
+              <li key={i} className="superficie tarjeta-int flex items-center gap-3 rounded-xl p-4">
+                <div className="chip-gradiente flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg">
                   <span className="text-[10px] font-semibold uppercase leading-none">
                     {new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", month: "short" }).format(p.fecha)}
                   </span>

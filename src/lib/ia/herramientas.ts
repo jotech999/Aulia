@@ -114,6 +114,12 @@ export const HERRAMIENTAS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "horario_hoy",
+    description:
+      "El horario de HOY del usuario docente: sus bloques de clase con hora de inicio/fin, asignatura, curso y estado (dictada, en curso o próxima, según la hora actual de Chile). Úsala cuando pregunten qué clases tienen hoy, cuál es la próxima clase o a qué hora les toca un curso. Solo para quienes dictan clases.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "pendientes_operativos",
     description:
       "Pendientes del libro de clases: clases dictadas sin firmar, cursos sin lista pasada hoy y evaluaciones vencidas sin notas. Para docentes muestra SUS pendientes; para dirección/UTP/inspectoría, los del colegio. Úsala cuando pregunten qué falta, qué está pendiente o cómo viene el cierre.",
@@ -155,6 +161,8 @@ export async function ejecutarHerramienta(
       return fichaEstudiante(user, entrada);
     case "pendientes_operativos":
       return pendientesOperativos(user);
+    case "horario_hoy":
+      return horarioHoy(user);
     default:
       return { salida: { error: `Herramienta desconocida: ${nombre}` } };
   }
@@ -566,6 +574,58 @@ async function pendientesOperativos(user: UsuarioIA): Promise<ResultadoHerramien
       entidad: "pendientes",
       entidadId: user.colegioId,
       meta: { herramienta: "pendientes_operativos" },
+    },
+  };
+}
+
+// ── Horario de hoy del docente ───────────────────────────────────────────────
+
+async function horarioHoy(user: UsuarioIA): Promise<ResultadoHerramienta> {
+  if (user.rol === "APODERADO" || user.rol === "ESTUDIANTE") {
+    return { salida: { error: "Esta consulta es para el equipo del colegio." } };
+  }
+  const { horaActualSantiago, diaSemanaHoySantiago } = await import("@/lib/fecha");
+  const dia = diaSemanaHoySantiago();
+  if (dia < 1 || dia > 5) {
+    return { salida: { mensaje: "Hoy es fin de semana: sin bloques de clase." } };
+  }
+  const ahora = horaActualSantiago();
+  const esGestion = ["ADMIN", "DIRECTOR", "UTP", "INSPECTOR"].includes(user.rol);
+  const bloques = await prisma.bloqueHorario.findMany({
+    where: {
+      colegioId: user.colegioId,
+      eliminadaEn: null,
+      dia,
+      asignatura: esGestion
+        ? { colegioId: user.colegioId }
+        : {
+            colegioId: user.colegioId,
+            OR: [{ docenteId: user.id }, { curso: { profesorJefeId: user.id } }],
+          },
+    },
+    select: {
+      horaInicio: true,
+      horaFin: true,
+      asignatura: {
+        select: { nombre: true, curso: { select: { nivel: true, letra: true } } },
+      },
+    },
+    orderBy: { horaInicio: "asc" },
+    take: 40,
+  });
+  if (!bloques.length) {
+    return { salida: { mensaje: "No hay bloques en el horario de hoy." } };
+  }
+  return {
+    salida: {
+      horaActual: ahora,
+      bloques: bloques.map((b) => ({
+        horario: `${b.horaInicio}-${b.horaFin}`,
+        asignatura: b.asignatura.nombre,
+        curso: `${b.asignatura.curso.nivel} ${b.asignatura.curso.letra}`,
+        estado:
+          ahora >= b.horaFin ? "dictada" : ahora >= b.horaInicio ? "en curso" : "próxima",
+      })),
     },
   };
 }

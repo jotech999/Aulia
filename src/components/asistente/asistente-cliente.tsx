@@ -7,11 +7,13 @@ type Mensaje = { rol: "user" | "assistant"; texto: string };
 
 const SUGERENCIAS: Record<string, string[]> = {
   PROFESOR: [
+    "¿Qué clases tengo hoy y cuál viene ahora?",
     "Resume la asistencia de mi curso",
     "¿Qué estudiantes tienen inasistencia crítica?",
     "Ayúdame a redactar un comunicado para apoderados",
   ],
   PROFESOR_JEFE: [
+    "¿Qué clases tengo hoy y qué me falta?",
     "¿Qué estudiantes de mi jefatura están en riesgo?",
     "Resume la asistencia de mi curso",
     "Busca a un estudiante por su apellido",

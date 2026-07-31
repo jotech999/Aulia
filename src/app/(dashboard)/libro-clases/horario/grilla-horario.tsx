@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * GRILLA DEL HORARIO (isla de cliente) — la semana viva:
- * - Reloj en Santiago: el bloque EN CURSO pulsa y lleva la insignia "Ahora";
- *   los de hoy ya dictados se atenúan.
- * - "Tu próxima clase": banner con cuenta regresiva del siguiente bloque de hoy.
- * - Clic en un bloque → panel de acciones: pasar lista, libreta, leccionario,
- *   evaluaciones (en vez de un único enlace escondido).
- * - Pestañas Semana | Hoy: agenda del día para el celular.
+ * GRILLA DEL HORARIO (isla de cliente) — agenda con eje de tiempo real, al
+ * estilo de un calendario moderno:
+ * - Los bloques se dibujan proporcionales a su duración sobre un eje horario
+ *   (una clase de 90 min se VE del doble de alto que una de 45).
+ * - Línea de "ahora" cruzando la columna de hoy, moviéndose en vivo (reloj de
+ *   Santiago); el bloque en curso pulsa con la insignia "Ahora".
+ * - Clic en un bloque → panel de acciones (pasar lista, libreta, leccionario,
+ *   evaluaciones) anclado al bloque.
+ * - Pestañas Semana | Hoy (agenda vertical del día para el celular).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { DIAS_LABORALES, NOMBRE_DIA, type BloqueVista, type FilaHorario } from "@/lib/horario";
 import { colorAsignatura } from "@/lib/colores-asignatura";
@@ -19,6 +21,7 @@ const aMin = (h: string) => {
   const [hh, mm] = h.split(":").map(Number);
   return hh * 60 + mm;
 };
+const PX_POR_MIN = 1.35; // 45 min ≈ 61 px
 
 /** Hora y día actuales en America/Santiago (independiente del reloj del PC). */
 function ahoraSantiago(): { dia: number; min: number } {
@@ -33,11 +36,11 @@ function ahoraSantiago(): { dia: number; min: number } {
   const DIA: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
   return {
     dia: DIA[get("weekday")] ?? 0,
-    min: Number(get("hour")) % 24 * 60 + Number(get("minute")),
+    min: (Number(get("hour")) % 24) * 60 + Number(get("minute")),
   };
 }
 
-type Sel = { dia: number; horaInicio: string } | null;
+type Pop = { b: BloqueVista; x: number; y: number } | null;
 
 export function GrillaHorario({
   filas,
@@ -48,64 +51,82 @@ export function GrillaHorario({
   filas: FilaHorario[];
   mostrarCurso: boolean;
   mostrarHorasLibres: boolean;
-  /** Acciones docentes en el popover (lista/libreta/leccionario). */
   conAcciones: boolean;
 }) {
   const [ahora, setAhora] = useState(ahoraSantiago);
-  const [sel, setSel] = useState<Sel>(null);
+  const [pop, setPop] = useState<Pop>(null);
   const [vista, setVista] = useState<"semana" | "hoy">("semana");
+  const marcoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setInterval(() => setAhora(ahoraSantiago()), 30_000);
     return () => clearInterval(t);
   }, []);
 
+  // Cerrar el popover con Escape.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPop(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const hoy = ahora.dia;
   const esDiaLaboral = hoy >= 1 && hoy <= 5;
+
+  const bloques = useMemo(
+    () => filas.flatMap((f) => f.celdas.filter((b): b is BloqueVista => b !== null)),
+    [filas]
+  );
+
+  // Eje de tiempo: desde la hora entera anterior al primer bloque hasta la
+  // siguiente al último.
+  const { minEje, maxEje, horas } = useMemo(() => {
+    if (!bloques.length) return { minEje: 480, maxEje: 960, horas: [] as number[] };
+    const min = Math.floor(Math.min(...bloques.map((b) => aMin(b.horaInicio))) / 60) * 60;
+    const max = Math.ceil(Math.max(...bloques.map((b) => aMin(b.horaFin))) / 60) * 60;
+    const hs: number[] = [];
+    for (let h = min; h <= max; h += 60) hs.push(h);
+    return { minEje: min, maxEje: max, horas: hs };
+  }, [bloques]);
+  const altoEje = (maxEje - minEje) * PX_POR_MIN;
 
   const bloquesHoy = useMemo(
     () =>
       esDiaLaboral
-        ? filas
-            .map((f) => f.celdas[hoy - 1])
-            .filter((b): b is BloqueVista => b !== null)
+        ? bloques
+            .filter((b) => b.dia === hoy)
             .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
         : [],
-    [filas, hoy, esDiaLaboral]
+    [bloques, hoy, esDiaLaboral]
   );
 
   const estadoBloque = (b: BloqueVista): "pasada" | "ahora" | "proxima" => {
+    if (!esDiaLaboral || b.dia !== hoy) return "proxima";
     if (ahora.min >= aMin(b.horaFin)) return "pasada";
     if (ahora.min >= aMin(b.horaInicio)) return "ahora";
     return "proxima";
   };
 
-  const proxima = bloquesHoy.find((b) => estadoBloque(b) === "proxima");
+  const proxima = bloquesHoy.find((b) => aMin(b.horaInicio) > ahora.min);
   const enCurso = bloquesHoy.find((b) => estadoBloque(b) === "ahora");
+  const lineaAhoraVisible = esDiaLaboral && ahora.min >= minEje && ahora.min <= maxEje;
 
-  const Popover = ({ b }: { b: BloqueVista }) => (
-    <div className="absolute left-1/2 top-full z-30 mt-1.5 w-56 -translate-x-1/2 rounded-xl border border-borde bg-superficie p-3 text-left shadow-flotante">
-      <p className="text-sm font-bold text-tinta">{b.asignatura}</p>
-      <p className="mt-0.5 text-xs text-tinta-tenue">
-        {b.horaInicio}–{b.horaFin}
-        {b.curso ? ` · ${b.curso}` : ""}
-      </p>
-      {conAcciones && (
-        <div className="mt-2.5 space-y-1">
-          {b.cursoId && (
-            <AccionBloque href={`/libro-clases/asistencia?cursoId=${b.cursoId}`} etiqueta="Pasar lista" />
-          )}
-          <AccionBloque href={`/libro-clases/calificaciones?asignaturaId=${b.asignaturaId}`} etiqueta="Libreta de notas" />
-          <AccionBloque href={`/libro-clases/firma?asignaturaId=${b.asignaturaId}`} etiqueta="Firmar leccionario" />
-          <AccionBloque href={`/libro-clases/evaluaciones?asignaturaId=${b.asignaturaId}`} etiqueta="Evaluaciones" />
-        </div>
-      )}
-    </div>
-  );
+  function abrirPop(e: React.MouseEvent, b: BloqueVista) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    // Anclado bajo el bloque; el popover es position:fixed (sobrevive al scroll
+    // horizontal del marco). Se ajusta para no salirse de la ventana.
+    const x = Math.min(Math.max(r.left + r.width / 2, 130), window.innerWidth - 130);
+    const y = Math.min(r.bottom + 6, window.innerHeight - 240);
+    setPop((p) => (p?.b === b ? null : { b, x, y }));
+  }
+
+  const fmtHora = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
   return (
     <div>
-      {/* Banner de la próxima clase (o la que está en curso) */}
+      {/* Banner: clase en curso o la próxima de hoy */}
       {(enCurso || proxima) && (
         <div
           data-noprint
@@ -172,19 +193,8 @@ export function GrillaHorario({
         ))}
       </div>
 
-      {/* Cierre del popover al hacer clic fuera */}
-      {sel && (
-        <button
-          type="button"
-          aria-label="Cerrar"
-          onClick={() => setSel(null)}
-          className="fixed inset-0 z-20 cursor-default"
-          tabIndex={-1}
-        />
-      )}
-
-      {/* Vista HOY: agenda del día */}
       {vista === "hoy" ? (
+        /* Vista HOY: agenda vertical del día */
         <div data-noprint>
           {bloquesHoy.length === 0 ? (
             <p className="superficie rounded-xl px-5 py-8 text-center text-sm text-tinta-suave">
@@ -229,90 +239,169 @@ export function GrillaHorario({
           )}
         </div>
       ) : (
-        /* Vista SEMANA: la grilla */
-        <div className="overflow-x-auto rounded-xl border border-borde bg-superficie shadow-suave">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-borde">
-                <th className="sticky left-0 z-10 w-16 bg-superficie px-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-tinta-tenue">
-                  Hora
-                </th>
-                {DIAS_LABORALES.map((dia) => (
-                  <th
-                    key={dia}
-                    className={`px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wide ${
-                      dia === hoy ? "bg-marca-50 text-marca-700" : "text-tinta-tenue"
-                    }`}
-                  >
-                    {NOMBRE_DIA[dia]}
-                    {dia === hoy && <span className="ml-1 text-marca-500">hoy</span>}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((fila) => (
-                <tr key={fila.horaInicio} className="border-b border-borde transition-colors last:border-0">
-                  <td className="sticky left-0 z-10 whitespace-nowrap bg-superficie px-2 py-2 align-top text-xs tabular-nums text-tinta-tenue">
-                    <div className="font-semibold text-tinta-suave">{fila.horaInicio}</div>
-                    <div>{fila.horaFin}</div>
-                  </td>
-                  {fila.celdas.map((celda, i) => {
-                    const dia = DIAS_LABORALES[i];
-                    const esHoy = dia === hoy;
-                    const est = celda && esHoy ? estadoBloque(celda) : null;
-                    const abierto = celda && sel?.dia === dia && sel?.horaInicio === fila.horaInicio;
-                    return (
-                      <td
-                        key={i}
-                        className={`relative px-1.5 py-1.5 align-top transition-colors ${
-                          esHoy ? "border-x border-marca-200/60 bg-marca-50/60" : ""
-                        }`}
-                      >
-                        {celda ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSel(abierto ? null : { dia, horaInicio: fila.horaInicio })
-                              }
-                              aria-expanded={Boolean(abierto)}
-                              title={`${celda.asignatura} — clic para ver acciones`}
-                              className={`block w-full rounded-lg px-2 py-1.5 text-left text-xs leading-tight transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:ring-2 hover:ring-marca-300 active:scale-[0.98] ${
-                                colorAsignatura(celda.asignatura, celda.color).suave
-                              } ${est === "pasada" ? "opacity-55" : ""} ${
-                                est === "ahora" ? "ring-2 ring-marca-500 shadow-md" : ""
-                              }`}
-                            >
-                              <span className="flex items-center gap-1 font-semibold">
-                                {celda.asignatura}
-                                {est === "ahora" && (
-                                  <span className="rounded bg-marca-600 px-1 py-px text-[9px] font-bold uppercase text-white">
-                                    Ahora
-                                  </span>
-                                )}
-                              </span>
-                              {mostrarCurso && celda.curso && (
-                                <span className="block opacity-70">{celda.curso}</span>
-                              )}
-                            </button>
-                            {abierto && <Popover b={celda} />}
-                          </>
-                        ) : mostrarHorasLibres ? (
-                          <span className="block rounded-lg border border-dashed border-borde px-2 py-2 text-center text-[11px] font-medium text-tinta-tenue">
-                            Hora libre
-                          </span>
-                        ) : (
-                          <span className="sr-only">Libre</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
+        /* Vista SEMANA: agenda con eje de tiempo proporcional */
+        <div
+          ref={marcoRef}
+          className="overflow-x-auto rounded-xl border border-borde bg-superficie p-3 shadow-suave sm:p-4"
+        >
+          <div className="min-w-[680px]">
+            {/* Encabezado de días */}
+            <div className="grid" style={{ gridTemplateColumns: "3.5rem repeat(5, 1fr)" }}>
+              <div />
+              {DIAS_LABORALES.map((dia) => (
+                <div
+                  key={dia}
+                  className={`mx-0.5 mb-2 rounded-lg py-1.5 text-center text-xs font-semibold uppercase tracking-wide ${
+                    dia === hoy
+                      ? "bg-gradient-to-r from-marca-600 to-marca-500 text-white shadow-suave"
+                      : "text-tinta-tenue"
+                  }`}
+                >
+                  {NOMBRE_DIA[dia]}
+                  {dia === hoy && <span className="ml-1 font-normal opacity-80">· hoy</span>}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Cuerpo: eje horario + 5 columnas */}
+            <div
+              className="relative grid"
+              style={{ gridTemplateColumns: "3.5rem repeat(5, 1fr)", height: `${altoEje}px` }}
+            >
+              {/* Regla de horas + líneas guía */}
+              <div className="relative">
+                {horas.map((h) => (
+                  <span
+                    key={h}
+                    className="absolute right-2 -translate-y-1/2 text-[11px] tabular-nums text-tinta-tenue"
+                    style={{ top: `${(h - minEje) * PX_POR_MIN}px` }}
+                  >
+                    {fmtHora(h)}
+                  </span>
+                ))}
+              </div>
+              {horas.map((h) => (
+                <span
+                  key={`l-${h}`}
+                  aria-hidden
+                  className="pointer-events-none absolute left-[3.5rem] right-0 border-t border-borde/70"
+                  style={{ top: `${(h - minEje) * PX_POR_MIN}px` }}
+                />
+              ))}
+
+              {/* Columnas por día */}
+              {DIAS_LABORALES.map((dia) => {
+                const esHoy = dia === hoy;
+                const delDia = bloques.filter((b) => b.dia === dia);
+                return (
+                  <div
+                    key={dia}
+                    className={`relative mx-0.5 rounded-lg ${esHoy ? "bg-marca-50/70" : ""}`}
+                  >
+                    {delDia.map((b) => {
+                      const est = estadoBloque(b);
+                      const c = colorAsignatura(b.asignatura, b.color);
+                      const top = (aMin(b.horaInicio) - minEje) * PX_POR_MIN;
+                      const alto = (aMin(b.horaFin) - aMin(b.horaInicio)) * PX_POR_MIN;
+                      const compacto = alto < 52;
+                      return (
+                        <button
+                          key={`${b.horaInicio}-${b.asignaturaId}`}
+                          type="button"
+                          onClick={(e) => abrirPop(e, b)}
+                          title={`${b.asignatura} · ${b.horaInicio}–${b.horaFin} — clic para acciones`}
+                          className={`absolute inset-x-1 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-left text-xs leading-tight shadow-suave transition-all duration-150 hover:z-10 hover:-translate-y-0.5 hover:shadow-elevada hover:ring-2 hover:ring-marca-300 active:scale-[0.985] ${c.suave} ${
+                            est === "pasada" ? "opacity-55" : ""
+                          } ${est === "ahora" ? "z-10 ring-2 ring-marca-500 shadow-elevada" : ""}`}
+                          style={{ top: `${top + 1}px`, height: `${Math.max(alto - 3, 22)}px`, borderLeftColor: "currentColor" }}
+                        >
+                          <span className="flex items-center gap-1 font-semibold">
+                            <span className="truncate">{b.asignatura}</span>
+                            {est === "ahora" && (
+                              <span className="shrink-0 rounded bg-marca-600 px-1 py-px text-[9px] font-bold uppercase text-white">
+                                Ahora
+                              </span>
+                            )}
+                          </span>
+                          {!compacto && (
+                            <span className="mt-0.5 block tabular-nums opacity-75">
+                              {b.horaInicio}–{b.horaFin}
+                              {mostrarCurso && b.curso ? ` · ${b.curso}` : ""}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {mostrarHorasLibres && delDia.length === 0 && (
+                      <span className="absolute inset-x-1 top-2 rounded-lg border border-dashed border-borde px-2 py-2 text-center text-[11px] font-medium text-tinta-tenue">
+                        Día libre
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Línea de AHORA cruzando la columna de hoy */}
+              {lineaAhoraVisible && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute left-[3.5rem] right-0 z-20"
+                  style={{ top: `${(ahora.min - minEje) * PX_POR_MIN}px` }}
+                >
+                  <div className="relative border-t-2 border-acento/90">
+                    <span className="absolute -left-1 -top-[5px] h-2 w-2 rounded-full bg-acento shadow-suave" />
+                    <span className="absolute right-1 -top-[9px] rounded bg-acento px-1 py-px text-[9px] font-bold tabular-nums text-marca-900">
+                      {fmtHora(ahora.min)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Popover de acciones (fijo: sobrevive al scroll del marco) */}
+      {pop && (
+        <>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => setPop(null)}
+            className="fixed inset-0 z-30 cursor-default"
+            tabIndex={-1}
+          />
+          <div
+            role="dialog"
+            aria-label={`Acciones de ${pop.b.asignatura}`}
+            className="animar-surgir fixed z-40 w-60 -translate-x-1/2 rounded-xl border border-borde bg-superficie p-3 shadow-flotante"
+            style={{ left: pop.x, top: pop.y }}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-8 w-1.5 shrink-0 rounded-full ${colorAsignatura(pop.b.asignatura, pop.b.color).punto}`}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-tinta">{pop.b.asignatura}</p>
+                <p className="text-xs tabular-nums text-tinta-tenue">
+                  {pop.b.horaInicio}–{pop.b.horaFin}
+                  {pop.b.curso ? ` · ${pop.b.curso}` : ""}
+                </p>
+              </div>
+            </div>
+            {conAcciones && (
+              <div className="mt-2.5 space-y-1">
+                {pop.b.cursoId && (
+                  <AccionBloque href={`/libro-clases/asistencia?cursoId=${pop.b.cursoId}`} etiqueta="Pasar lista" />
+                )}
+                <AccionBloque href={`/libro-clases/calificaciones?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Libreta de notas" />
+                <AccionBloque href={`/libro-clases/firma?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Firmar leccionario" />
+                <AccionBloque href={`/libro-clases/evaluaciones?asignaturaId=${pop.b.asignaturaId}`} etiqueta="Evaluaciones" />
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

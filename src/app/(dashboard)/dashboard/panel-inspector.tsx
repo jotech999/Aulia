@@ -32,7 +32,7 @@ export async function PanelInspector({ colegioId, nombre, colegioNombre }: { col
     { href: "/admin/estudiantes", titulo: "Buscar estudiante", detalle: "Ficha y antecedentes operativos", icono: Iconos.estudiantes, tono: "bg-superficie-3 text-tinta-suave" },
   ];
   return <div className="animar-surgir space-y-7">
-    <header className="encabezado-cine malla-academica rounded-2xl px-6 py-7 text-white shadow-elevada sm:px-8"><p className="text-xs font-semibold uppercase tracking-wider text-white/60">{formatearFechaLarga(hoyISO)} · {colegioNombre}</p><h1 className="mt-1.5 font-display text-3xl font-bold">Jornada de hoy{nombre ? `, ${nombre.split(" ")[0]}` : ""}</h1><p className="mt-1 text-sm text-white/75">Pendientes operativos, asistencia y convivencia sin ruido administrativo.</p></header>
+    <header className="encabezado-cine malla-academica estrellas relative overflow-hidden rounded-2xl px-6 py-7 text-white shadow-elevada sm:px-8"><span className="aurora-luz aurora-luz-1" aria-hidden /><span className="aurora-luz aurora-luz-2" aria-hidden /><p className="text-xs font-semibold uppercase tracking-wider text-white/60">{formatearFechaLarga(hoyISO)} · {colegioNombre}</p><h1 className="mt-1.5 font-display text-3xl font-bold">Jornada de hoy{nombre ? `, ${nombre.split(" ")[0]}` : ""}</h1><p className="mt-1 text-sm text-white/75">Pendientes operativos, asistencia y convivencia sin ruido administrativo.</p></header>
     <AccesosRapidos rol="INSPECTOR" />
     <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[
       ["Ausentes", ausentes, "text-peligro", true],

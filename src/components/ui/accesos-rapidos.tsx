@@ -62,13 +62,13 @@ export function AccesosRapidos({ rol }: { rol: string }) {
               key={a.href + a.etiqueta}
               href={a.href}
               prefetch
-              className="superficie tarjeta-int group flex flex-col gap-2 rounded-xl p-3.5"
+              className="superficie tarjeta-int tarjeta-lumen group flex flex-col gap-2.5 rounded-xl border border-borde p-3.5 shadow-suave transition-all duration-300 hover:-translate-y-1"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-marca-50 text-marca-600 transition-colors group-hover:bg-marca-500 group-hover:text-white">
+              <span className="icono-gradiente flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-suave transition-transform duration-300 group-hover:scale-110">
                 <Icono className="h-[18px] w-[18px]" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-tinta">{a.etiqueta}</span>
+                <span className="block truncate text-sm font-semibold text-tinta transition-colors group-hover:text-marca-700">{a.etiqueta}</span>
                 <span className="block truncate text-[11px] leading-snug text-tinta-tenue">{a.descripcion}</span>
               </span>
             </Link>

@@ -229,7 +229,9 @@ export async function PanelDireccion({
 
   return (
     <div className="animar-surgir">
-      <header className="encabezado-cine malla-academica relative rounded-2xl px-6 py-7 shadow-elevada sm:px-9 sm:py-9">
+      <header className="encabezado-cine malla-academica estrellas relative overflow-hidden rounded-2xl px-6 py-7 shadow-elevada sm:px-9 sm:py-9">
+        <span className="aurora-luz aurora-luz-1" aria-hidden />
+        <span className="aurora-luz aurora-luz-2" aria-hidden />
         <span
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent"
           aria-hidden

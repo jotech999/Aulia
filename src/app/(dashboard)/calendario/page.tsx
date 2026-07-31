@@ -20,11 +20,13 @@ import {
 } from "@/lib/fecha";
 import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { NuevoEvento } from "./nuevo-evento";
+import { NuevaEvaluacion } from "./nueva-evaluacion";
 import { BotonEliminarEvento } from "./boton-eliminar";
 import { nombreCurso } from "@/lib/cursos";
 
 const RE_MES = /^\d{4}-\d{2}$/;
 const GESTORES = new Set(["ADMIN", "DIRECTOR", "UTP"]);
+const EVALUADORES = new Set(["ADMIN", "DIRECTOR", "UTP", "PROFESOR_JEFE", "PROFESOR"]);
 
 type EventoDia = {
   id: string | null; // null = evaluación (no editable desde el calendario)
@@ -54,12 +56,13 @@ export default async function CalendarioPage({
   const mes = sp.mes && RE_MES.test(sp.mes) ? sp.mes : mesActualSantiago();
   const { inicio, fin } = rangoMes(mes);
   const puedeGestionar = GESTORES.has(user.rol);
+  const puedeEvaluar = EVALUADORES.has(user.rol);
   const esApoderado = user.rol === "APODERADO";
   const esEstudiante = user.rol === "ESTUDIANTE";
   const esVistaPersonal = esApoderado || esEstudiante;
   // Día preseleccionado (clic en el calendario) → abre el formulario con esa fecha.
   const diaSel =
-    puedeGestionar && sp.dia && esFechaISOValida(sp.dia) ? sp.dia : null;
+    (puedeGestionar || puedeEvaluar) && sp.dia && esFechaISOValida(sp.dia) ? sp.dia : null;
 
   // El apoderado solo ve eventos del colegio + de los cursos de sus pupilos, y
   // las evaluaciones de esos cursos (Ley 21.719: nada de otros estudiantes).
@@ -83,7 +86,7 @@ export default async function CalendarioPage({
     : [];
 
   const rango = { gte: inicio, lte: fin };
-  const [eventos, evaluaciones, cursos] = await Promise.all([
+  const [eventos, evaluaciones, cursos, misAsignaturas, reuniones, entrevistas] = await Promise.all([
     prisma.eventoEscolar.findMany({
       where: {
         colegioId: user.colegioId,
@@ -125,6 +128,42 @@ export default async function CalendarioPage({
           orderBy: [{ nivel: "asc" }, { letra: "asc" }],
         })
       : Promise.resolve([]),
+    // Asignaturas del docente: para agendar una evaluación desde el calendario.
+    puedeEvaluar
+      ? prisma.asignatura.findMany({
+          where: whereAsignaturasFirma(user),
+          select: { id: true, nombre: true, curso: { select: { nivel: true, letra: true } } },
+          orderBy: [{ curso: { nivel: "asc" } }, { nombre: "asc" }],
+        })
+      : Promise.resolve([]),
+    // Reuniones de apoderados del mes (pedido apoderado: verlas en el calendario).
+    prisma.reunionApoderados.findMany({
+      where: {
+        colegioId: user.colegioId,
+        eliminadaEn: null,
+        fecha: rango,
+        ...(esVistaPersonal ? { cursoId: { in: cursosPupilos } } : {}),
+      },
+      select: {
+        fecha: true,
+        horaInicio: true,
+        tema: true,
+        curso: { select: { nivel: true, letra: true } },
+      },
+      orderBy: { fecha: "asc" },
+    }),
+    // Entrevistas de apoderado (solo el apoderado ve las de SUS pupilos).
+    esApoderado
+      ? prisma.entrevista.findMany({
+          where: {
+            colegioId: user.colegioId,
+            eliminadaEn: null,
+            estudiante: { apoderados: { some: { usuarioId: user.id } } },
+            OR: [{ fecha: rango }, { proximaCita: rango }],
+          },
+          select: { fecha: true, proximaCita: true, estudiante: { select: { nombres: true } } },
+        })
+      : Promise.resolve([]),
   ]);
 
   // Índice iso → eventos del día (eventos del colegio + evaluaciones).
@@ -150,6 +189,28 @@ export default async function CalendarioPage({
       curso: nombreCurso(ev.asignatura.curso),
       colorPunto: colorAsignatura(ev.asignatura.nombre, ev.asignatura.color).punto,
     });
+  }
+
+  for (const r of reuniones) {
+    agregar(r.fecha.toISOString().slice(0, 10), {
+      id: null,
+      titulo: `Reunión de apoderados ${r.horaInicio} · ${r.tema}`,
+      tipo: "REUNION",
+      curso: nombreCurso(r.curso),
+    });
+  }
+  for (const en of entrevistas) {
+    const nombre = en.estudiante.nombres.split(" ")[0];
+    const fIso = en.fecha.toISOString().slice(0, 10);
+    if (fIso >= inicio.toISOString().slice(0, 10) && fIso <= fin.toISOString().slice(0, 10)) {
+      agregar(fIso, { id: null, titulo: `Entrevista de apoderado · ${nombre}`, tipo: "REUNION", curso: null });
+    }
+    if (en.proximaCita) {
+      const pIso = en.proximaCita.toISOString().slice(0, 10);
+      if (pIso >= inicio.toISOString().slice(0, 10) && pIso <= fin.toISOString().slice(0, 10)) {
+        agregar(pIso, { id: null, titulo: `Próxima entrevista · ${nombre}`, tipo: "REUNION", curso: null });
+      }
+    }
   }
 
   // Feriados legales de Chile (capa de referencia, no eventos del colegio). Se
@@ -204,14 +265,30 @@ export default async function CalendarioPage({
             </Link>
           )}
         </div>
-        {puedeGestionar && (
-          <NuevoEvento
-            cursos={cursos.map((c) => ({ id: c.id, nombre: nombreCurso(c) }))}
+        <div className="flex flex-wrap items-center gap-2">
+          {puedeGestionar && (
+            <NuevoEvento
+              cursos={cursos.map((c) => ({ id: c.id, nombre: nombreCurso(c) }))}
+              fechaInicial={diaSel ?? hoy}
+              autoAbrir={false}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Agendar evaluación (docentes): se abre al tocar un día del calendario */}
+      {puedeEvaluar && (
+        <div className="mb-4">
+          <NuevaEvaluacion
+            asignaturas={misAsignaturas.map((a) => ({
+              id: a.id,
+              nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
+            }))}
             fechaInicial={diaSel ?? hoy}
             autoAbrir={diaSel !== null}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Leyenda de tipos de evento (facilita la lectura del calendario) */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-borde bg-superficie px-4 py-2.5 text-xs text-tinta-suave">
@@ -257,11 +334,11 @@ export default async function CalendarioPage({
                             ? "text-tinta-suave"
                             : "text-tinta-tenue"
                       }`;
-                      return puedeGestionar ? (
+                      return puedeGestionar || puedeEvaluar ? (
                         <Link
                           href={`/calendario?mes=${mes}&dia=${celda.iso}`}
                           scroll={false}
-                          title="Agregar evento este día"
+                          title="Agendar evaluación o evento este día"
                           className={`${claseDia} transition-colors hover:ring-2 hover:ring-marca-300`}
                         >
                           {celda.dia}

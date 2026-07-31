@@ -56,10 +56,11 @@ const GRUPOS_BASE: Grupo[] = [
     titulo: "Libro de clases",
     items: [
       { href: "/libro-clases", etiqueta: "Libro de clases", icono: "libro", roles: DOCENTES },
-      { href: "/libro-clases/horario", etiqueta: "Horario", icono: "asistencia", roles: DOCENTES },
+      { href: "/libro-clases/horario", etiqueta: "Mi horario", icono: "asistencia", roles: ["PROFESOR", "PROFESOR_JEFE"] },
+      { href: "/libro-clases/horario", etiqueta: "Horarios", icono: "asistencia", roles: ["ADMIN", "DIRECTOR", "UTP"] },
       { href: "/libro-clases/asistencia", etiqueta: "Asistencia", icono: "asistencia" },
       { href: "/libro-clases/calificaciones", etiqueta: "Calificaciones", icono: "calificaciones", roles: DOCENTES },
-      { href: "/libro-clases/evaluaciones", etiqueta: "Evaluaciones", icono: "planificacion", roles: DOCENTES },
+      { href: "/libro-clases/evaluaciones", etiqueta: "Evaluaciones online", icono: "planificacion", roles: DOCENTES },
       { href: "/libro-clases/rubricas", etiqueta: "Rúbricas y pautas", icono: "calificaciones", roles: ["ADMIN", "DIRECTOR", "UTP", "PROFESOR_JEFE", "PROFESOR"] },
       { href: "/libro-clases/firma", etiqueta: "Leccionario", icono: "firma", roles: DOCENTES },
       { href: "/libro-clases/anotaciones", etiqueta: "Anotaciones", icono: "convivencia" },

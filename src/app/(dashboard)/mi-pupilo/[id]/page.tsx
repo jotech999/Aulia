@@ -324,7 +324,7 @@ export default async function MiPupiloPage({
       {/* Mensajes con el profesor jefe */}
       <section id="mensajes" className="mt-8 scroll-mt-20">
         <h2 className="font-display text-lg font-semibold tracking-tight">
-          Mensajes con {curso?.profesorJefe?.nombre ?? "el profesor jefe"}
+          Mandar mensaje a profesor(a) jefe {curso?.profesorJefe?.nombre ?? ""}
         </h2>
         <HiloMensajes
           estudianteId={estudiante.id}

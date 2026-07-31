@@ -5,6 +5,7 @@ import { Iconos, type NombreIcono } from "@/components/ui/iconos";
 import { Isotipo } from "@/components/ui/isotipo";
 import { FormularioDemo } from "@/components/landing/form-demo";
 import { CalculadoraPrecio } from "@/components/landing/calculadora-precio";
+import { PulsoVivo } from "@/components/landing/pulso-vivo";
 import { PLANES, cotizar, formatearCLP, formatearUF } from "@/lib/precios";
 
 export const metadata = {
@@ -598,6 +599,21 @@ export default async function Home() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* El pulso del colegio: gráficas vivas que se dibujan al hacer scroll */}
+      <section className="revelar-scroll mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+        <p className="text-center text-xs font-bold uppercase tracking-widest text-marca-600">Datos en vivo</p>
+        <h2 className="mt-2 text-center font-display text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          El pulso del colegio, <span className="texto-degradado">de un vistazo</span>
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-tinta-suave">
+          Dirección y UTP ven la asistencia, el cumplimiento y las alertas del
+          establecimiento en tiempo real. Así se ve el panel:
+        </p>
+        <div className="mt-12">
+          <PulsoVivo />
         </div>
       </section>
 

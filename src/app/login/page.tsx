@@ -38,7 +38,10 @@ export default async function LoginPage({
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
       {/* Panel cinematográfico — decorativo, sin información esencial dentro */}
-      <section className="encabezado-cine malla-academica relative hidden flex-col justify-between p-12 lg:flex">
+      <section className="encabezado-cine malla-academica estrellas relative hidden flex-col justify-between overflow-hidden p-12 lg:flex">
+        <span className="aurora-luz aurora-luz-1" aria-hidden />
+        <span className="aurora-luz aurora-luz-2" aria-hidden />
+        <span className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-acento/60 to-transparent" aria-hidden />
         <Link
           href="/"
           className="inline-flex w-fit items-center gap-2.5 text-white transition-opacity hover:opacity-90"

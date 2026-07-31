@@ -22,6 +22,7 @@ import { SelectorContexto } from "@/components/selector-contexto";
 import { BotonCerrarSesion } from "@/components/boton-cerrar-sesion";
 import { MigracionClavesLocales } from "@/components/migracion-claves-locales";
 import { AccionesTopbar } from "@/components/ui/acciones-topbar";
+import { TemaToggle } from "@/components/ui/tema-toggle";
 
 async function cerrarSesion() {
   "use server";
@@ -184,6 +185,7 @@ export default async function DashboardLayout({
             <ContextoEscolar user={sesion.user} />
             <div className="mx-1 h-5 w-px bg-borde" aria-hidden />
             {muestraHoy && <BotonHoy />}
+            <TemaToggle />
             <BotonAyuda />
             <Campana items={itemsNotif} noLeidas={noLeidas} />
           </div>
@@ -199,6 +201,7 @@ export default async function DashboardLayout({
             </div>
             <div className="flex items-center gap-1">
               {muestraHoy && <BotonHoy />}
+              <TemaToggle />
               <Campana items={itemsNotif} noLeidas={noLeidas} />
               <BotonPaleta compacto />
               <form action={cerrarSesion}>

@@ -339,8 +339,9 @@ export async function PanelDireccion({
 
       {/* Gráficos */}
       <section className="mt-8 grid gap-3 lg:grid-cols-5">
-        <div className="superficie rounded-xl p-5 lg:col-span-3">
-          <h2 className="font-display text-base font-semibold tracking-tight">
+        <div className="superficie tarjeta-lumen rounded-2xl border border-borde p-5 shadow-suave transition-shadow duration-300 hover:shadow-elevada lg:col-span-3">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
+            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-marca-500 to-acento" aria-hidden />
             Evolución de la asistencia
           </h2>
           <p className="mb-2 text-xs text-tinta-tenue">Promedio mensual del colegio</p>
@@ -360,8 +361,9 @@ export async function PanelDireccion({
             <p className="py-14 text-center text-sm text-tinta-tenue">Sin datos de asistencia aún.</p>
           )}
         </div>
-        <div className="superficie rounded-xl p-5 lg:col-span-2">
-          <h2 className="font-display text-base font-semibold tracking-tight">
+        <div className="superficie tarjeta-lumen rounded-2xl border border-borde p-5 shadow-suave transition-shadow duration-300 hover:shadow-elevada lg:col-span-2">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
+            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-marca-500 to-acento" aria-hidden />
             Promedio por curso
           </h2>
           <p className="mb-4 text-xs text-tinta-tenue">Escala 1.0–7.0</p>

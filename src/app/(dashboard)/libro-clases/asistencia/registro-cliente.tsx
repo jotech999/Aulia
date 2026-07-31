@@ -367,7 +367,7 @@ export function RegistroAsistencia({
   return (
     <div className="mx-auto max-w-2xl pb-28 md:pb-8">
       {/* Resumen sticky en vivo: conteos + % + barra de distribución */}
-      <div className="sticky top-0 z-10 mt-4 rounded-xl border border-borde bg-superficie/95 px-4 py-3 text-sm shadow-suave backdrop-blur">
+      <div className="acento-superior sticky top-0 z-10 mt-4 rounded-2xl border border-borde bg-superficie/95 px-4 py-3 text-sm shadow-elevada backdrop-blur">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {conteos.map(({ estado, n }) => (
             <span key={estado} className={`inline-flex items-center gap-1.5 font-semibold ${ESTADOS_UI[estado].texto}`}>
@@ -503,7 +503,9 @@ export function RegistroAsistencia({
           const ui = ESTADOS_UI[estado];
           return (
             <li key={e.id}>
-              <div className={`flex items-center gap-3 rounded-xl border p-2 pl-3 transition-colors ${ui.fila}`}>
+              <div
+                className={`flex items-center gap-3 rounded-xl border p-2 pl-3 shadow-suave transition-all duration-200 hover:shadow-elevada active:scale-[0.99] ${ui.fila}`}
+              >
                 <button
                   type="button"
                   disabled={esFutura}
@@ -517,7 +519,13 @@ export function RegistroAsistencia({
                   aria-label={`${e.nombre}: ${ui.label}. ${pincel ? `Aplicar ${ESTADOS_UI[pincel].label}` : "Tocar para cambiar estado"}.`}
                   className="flex min-h-[52px] flex-1 items-center gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-marca-500/40 disabled:opacity-60"
                 >
-                  <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold ${ui.celda}`} aria-hidden>
+                  {/* key por estado: al cambiar la marca, el badge se re-monta y
+                      dispara la animación de "pop" — feedback táctil visual. */}
+                  <span
+                    key={estado}
+                    className={`pop-marca grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold shadow-suave ${ui.celda}`}
+                    aria-hidden
+                  >
                     {ui.icono}
                   </span>
                   <span className="min-w-0 flex-1">

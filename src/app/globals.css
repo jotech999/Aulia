@@ -890,3 +890,17 @@ body {
     0 16px 40px -14px color-mix(in srgb, var(--color-marca-500) 55%, transparent),
     0 2px 8px -2px color-mix(in srgb, var(--color-marca-500) 22%, transparent);
 }
+
+/* Pop de marca de asistencia: el badge "salta" al cambiar de estado, dando
+   confirmación táctil de que el toque registró. Guard de reduced-motion. */
+@keyframes pop-marca {
+  0% { transform: scale(0.55); }
+  60% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.pop-marca {
+  animation: pop-marca 0.28s var(--ease-suave);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop-marca { animation: none; }
+}

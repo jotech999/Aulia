@@ -28,6 +28,6 @@ export default function robots(): MetadataRoute.Robots {
         "/verificar",
       ],
     },
-    sitemap: "https://educhile.cl/sitemap.xml",
+    sitemap: "https://aulia.cl/sitemap.xml",
   };
 }

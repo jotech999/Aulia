@@ -11,7 +11,7 @@ const fontVars = {
 } as React.CSSProperties;
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://educhile.cl"),
+  metadataBase: new URL("https://aulia.cl"),
   title: {
     default: "Aulia — Gestión escolar para colegios chilenos",
     template: "%s · Aulia",

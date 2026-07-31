@@ -13,7 +13,7 @@ function configurar(): boolean {
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:soporte@educhile.cl", pub, priv);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:soporte@aulia.cl", pub, priv);
   configurado = true;
   return true;
 }

@@ -315,7 +315,7 @@ export default async function Home() {
     provider: {
       "@type": "Organization",
       name: "Aulia",
-      url: "https://educhile.cl",
+      url: "https://aulia.cl",
       areaServed: "CL",
       slogan: "El libro de clases que los profesores de verdad quieren usar.",
     },

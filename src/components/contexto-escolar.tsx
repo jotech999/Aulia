@@ -24,8 +24,12 @@ export async function ContextoEscolar({
   const hoy = hoyEnSantiago();
   const semestre = semestreEscolar();
 
-  // Próxima clase de hoy: solo para quien dicta clases, con horario cargado.
-  let proxima: { nombre: string; horaInicio: string; color: string | null } | null = null;
+  // Clase de hoy en el topbar: la que está EN CURSO (con su hora de término) o,
+  // si no hay ninguna dictándose, la próxima que viene. Antes etiquetaba
+  // "Próxima" a una clase ya empezada, contradiciendo al horario.
+  let claseHoy:
+    | { nombre: string; hora: string; enCurso: boolean; color: string | null }
+    | null = null;
   if (ROLES_DOCENTES.has(user.rol)) {
     const ahora = horaActualSantiago();
     const dia = diaSemanaHoySantiago();
@@ -33,19 +37,22 @@ export async function ContextoEscolar({
       where: {
         eliminadaEn: null,
         dia,
-        horaFin: { gte: ahora }, // aún no termina
+        horaFin: { gt: ahora }, // aún no termina
         asignatura: whereAsignaturasFirma(user),
       },
       orderBy: { horaInicio: "asc" },
       select: {
         horaInicio: true,
+        horaFin: true,
         asignatura: { select: { nombre: true, color: true } },
       },
     });
     if (bloque) {
-      proxima = {
+      const enCurso = bloque.horaInicio <= ahora;
+      claseHoy = {
         nombre: bloque.asignatura.nombre,
-        horaInicio: bloque.horaInicio,
+        hora: enCurso ? bloque.horaFin : bloque.horaInicio,
+        enCurso,
         color: bloque.asignatura.color,
       };
     }
@@ -53,7 +60,7 @@ export async function ContextoEscolar({
 
   return (
     <div className="hidden items-center gap-3 text-sm lg:flex">
-      <span className="flex items-center gap-1.5 text-tinta-suave">
+      <span className="flex items-center gap-1.5 whitespace-nowrap text-tinta-suave">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-tinta-tenue" aria-hidden>
           <rect x="3" y="4.5" width="18" height="16" rx="2" />
           <path d="M3 9h18M8 2.5v4M16 2.5v4" />
@@ -62,21 +69,28 @@ export async function ContextoEscolar({
       </span>
 
       <span className="h-4 w-px bg-borde" aria-hidden />
-      <span className="text-tinta-tenue">{semestre}º semestre</span>
+      <span className="whitespace-nowrap text-tinta-tenue">{semestre}º semestre</span>
 
-      {proxima && (
-        <>
+      {claseHoy && (
+        <span className="hidden items-center gap-1.5 whitespace-nowrap xl:flex" title={claseHoy.enCurso ? "Clase en curso" : "Tu próxima clase de hoy"}>
           <span className="h-4 w-px bg-borde" aria-hidden />
-          <span className="flex items-center gap-1.5" title="Tu próxima clase de hoy">
+          {claseHoy.enCurso ? (
+            <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-acento opacity-70" />
+              <span className={`relative inline-flex h-2 w-2 rounded-full ${colorAsignatura(claseHoy.nombre, claseHoy.color).punto}`} />
+            </span>
+          ) : (
             <span
-              className={`h-2 w-2 shrink-0 rounded-full ${colorAsignatura(proxima.nombre, proxima.color).punto}`}
+              className={`h-2 w-2 shrink-0 rounded-full ${colorAsignatura(claseHoy.nombre, claseHoy.color).punto}`}
               aria-hidden
             />
-            <span className="text-tinta-tenue">Próxima:</span>
-            <span className="font-medium text-tinta-suave">{proxima.nombre}</span>
-            <span className="tabular-nums text-tinta-tenue">{proxima.horaInicio}</span>
+          )}
+          <span className="text-tinta-tenue">{claseHoy.enCurso ? "Ahora:" : "Próxima:"}</span>
+          <span className="max-w-40 truncate font-medium text-tinta-suave">{claseHoy.nombre}</span>
+          <span className="tabular-nums text-tinta-tenue">
+            {claseHoy.enCurso ? `hasta ${claseHoy.hora}` : claseHoy.hora}
           </span>
-        </>
+        </span>
       )}
     </div>
   );

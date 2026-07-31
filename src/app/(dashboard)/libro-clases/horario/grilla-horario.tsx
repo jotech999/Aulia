@@ -72,6 +72,20 @@ export function GrillaHorario({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // El popover es position:fixed (anclado a coordenadas de pantalla): si la
+  // página o el marco hacen scroll, quedaría flotando lejos de su bloque.
+  // Se cierra ante cualquier scroll o cambio de tamaño.
+  useEffect(() => {
+    if (!pop) return;
+    const cerrar = () => setPop(null);
+    window.addEventListener("scroll", cerrar, { capture: true, passive: true });
+    window.addEventListener("resize", cerrar);
+    return () => {
+      window.removeEventListener("scroll", cerrar, { capture: true });
+      window.removeEventListener("resize", cerrar);
+    };
+  }, [pop]);
+
   const hoy = ahora.dia;
   const esDiaLaboral = hoy >= 1 && hoy <= 5;
 

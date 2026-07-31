@@ -323,6 +323,16 @@ async function dibujarPagina(
       { x: MARGEN, y: MARGEN + 20, size: 8, font, color: GRIS }
     );
   }
+
+  // Marca discreta al pie de todas las páginas: cada documento que sale del
+  // colegio lleva la firma de la plataforma.
+  ctx.page.drawText("Generado con Aulia · aulia.cl", {
+    x: MARGEN,
+    y: MARGEN - 24,
+    size: 7.5,
+    font,
+    color: rgb(0.62, 0.65, 0.68),
+  });
 }
 
 export async function generarPdfCertificado(params: {

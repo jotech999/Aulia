@@ -22,6 +22,7 @@ import { SelectorContexto } from "@/components/selector-contexto";
 import { BotonCerrarSesion } from "@/components/boton-cerrar-sesion";
 import { MigracionClavesLocales } from "@/components/migracion-claves-locales";
 import { AccionesTopbar } from "@/components/ui/acciones-topbar";
+import { SplashEntrada } from "@/components/ui/splash-entrada";
 
 async function cerrarSesion() {
   "use server";
@@ -217,8 +218,30 @@ export default async function DashboardLayout({
           )}
         </header>
 
-        <main id="contenido" className="mx-auto max-w-5xl p-4 md:p-8">{children}</main>
+        <main id="contenido" className="mx-auto max-w-5xl p-4 md:p-8">
+          {children}
+          {/* Pie de impresión: toda vista impresa desde la plataforma lleva la marca */}
+          <p className="pie-impresion">
+            Documento generado con Aulia · aulia.cl · {sesion.user.colegioNombre}
+          </p>
+          {/* En el portal del apoderado/estudiante, la marca es prescriptora */}
+          {["APODERADO", "ESTUDIANTE"].includes(rol) && (
+            <footer data-noprint className="mt-10 border-t border-borde pt-4 pb-2 text-center">
+              <a
+                href="https://aulia.cl"
+                target="_blank"
+                rel="noopener"
+                className="text-xs text-tinta-tenue transition-colors hover:text-marca-600"
+              >
+                {sesion.user.colegioNombre} gestiona su día a día con{" "}
+                <span className="font-semibold text-marca-600">Aulia</span> · aulia.cl
+              </a>
+            </footer>
+          )}
+        </main>
       </div>
+
+      <SplashEntrada />
 
       <PaletaComandos rol={rol} />
 

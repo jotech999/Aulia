@@ -59,5 +59,9 @@ export function plantillaAviso(titulo: string, detalle: string, colegio: string)
       Ingresa a la plataforma de ${c} para ver el detalle. Este es un aviso
       automático; por favor no respondas a este correo.
     </p>
+    <p style="border-top:1px solid #e5e2db;color:#a9afa6;font-size:11px;margin:20px 0 0;padding-top:10px">
+      Enviado con <a href="https://aulia.cl" style="color:#8a5fe4;text-decoration:none;font-weight:600">Aulia</a>,
+      la plataforma de gestión escolar de ${c}.
+    </p>
   </div>`;
 }

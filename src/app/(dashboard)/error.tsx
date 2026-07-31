@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Auli } from "@/components/ui/auli";
 
 /**
  * Frontera de error del dashboard: si cualquier página del panel falla,
@@ -31,11 +30,9 @@ export default function ErrorDashboard({
 
   return (
     <div className="mx-auto mt-16 max-w-md text-center">
-      <span className="inline-block" aria-hidden>
-        <Auli animo="sorprendida" className="h-16 w-16" />
-      </span>
+      <p className="text-4xl" aria-hidden>⚠️</p>
       <h1 className="mt-3 font-display text-xl font-bold text-tinta">
-        ¡Uy! Algo salió mal en esta página
+        Algo salió mal en esta página
       </h1>
       <p className="mt-2 text-sm text-tinta-suave">
         El problema quedó registrado y lo revisaremos. Puedes reintentar o volver

@@ -1,36 +1,13 @@
 /**
  * AULI — la mascota de Aulia: una pizarra verde clásica (como las antiguas)
  * con marco de madera, ojos que parpadean, sonrisa de tiza y su tiza en la
- * bandeja. Es el personaje del asistente de IA y de toda la plataforma.
- *
- * Ánimos:
- * - "feliz" (default): sonrisa de tiza — el asistente, saludos.
- * - "curiosa": mira hacia arriba con boquita de "hmm" — estados vacíos.
- * - "sorprendida": ojos grandes y boca abierta — páginas de error.
+ * bandeja. Es el personaje del asistente de IA.
  *
  * SVG autocontenido; el parpadeo vive en globals.css (.auli-ojo) y respeta
  * prefers-reduced-motion. Decorativa (aria-hidden): el texto accesible lo
  * pone quien la usa.
  */
-export type AnimoAuli = "feliz" | "curiosa" | "sorprendida";
-
-export function Auli({
-  className = "h-8 w-8",
-  animo = "feliz",
-}: {
-  className?: string;
-  animo?: AnimoAuli;
-}) {
-  // Pupilas: hacia el frente (feliz), hacia arriba pensando (curiosa),
-  // al centro y chicas (sorprendida).
-  const pupila =
-    animo === "curiosa"
-      ? { dx: 1.6, dy: -1.8, r: 2.5 }
-      : animo === "sorprendida"
-        ? { dx: 0, dy: 0, r: 2.2 }
-        : { dx: 1.2, dy: 1.1, r: 2.7 };
-  const ojoRy = animo === "sorprendida" ? 7 : 6.2;
-
+export function Auli({ className = "h-8 w-8" }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
       {/* Marco de madera (ámbar tiza, el acento de la marca) */}
@@ -63,40 +40,26 @@ export function Auli({
       />
       {/* Ojos (parpadean) */}
       <g className="auli-ojo">
-        <ellipse cx="24" cy="27.5" rx="5.4" ry={ojoRy} fill="#fff" />
-        <circle cx={24 + pupila.dx} cy={27.5 + pupila.dy} r={pupila.r} fill="#1c3a31" />
-        <circle cx={25 + pupila.dx} cy={26.3 + pupila.dy} r="0.9" fill="#fff" />
+        <ellipse cx="24" cy="27.5" rx="5.4" ry="6.2" fill="#fff" />
+        <circle cx="25.2" cy="28.6" r="2.7" fill="#1c3a31" />
+        <circle cx="26.2" cy="27.4" r="0.9" fill="#fff" />
       </g>
       <g className="auli-ojo auli-ojo-2">
-        <ellipse cx="40" cy="27.5" rx="5.4" ry={ojoRy} fill="#fff" />
-        <circle cx={40 + pupila.dx} cy={27.5 + pupila.dy} r={pupila.r} fill="#1c3a31" />
-        <circle cx={41 + pupila.dx} cy={26.3 + pupila.dy} r="0.9" fill="#fff" />
+        <ellipse cx="40" cy="27.5" rx="5.4" ry="6.2" fill="#fff" />
+        <circle cx="41.2" cy="28.6" r="2.7" fill="#1c3a31" />
+        <circle cx="42.2" cy="27.4" r="0.9" fill="#fff" />
       </g>
       {/* Mejillas de tiza */}
       <circle cx="17.5" cy="35" r="2.6" fill="#fdfaf2" opacity="0.35" />
       <circle cx="46.5" cy="35" r="2.6" fill="#fdfaf2" opacity="0.35" />
-      {/* Boca de tiza según el ánimo */}
-      {animo === "feliz" && (
-        <path
-          d="M26.5 38.5c3.4 3.1 7.6 3.1 11 0"
-          stroke="#fdfaf2"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          fill="none"
-        />
-      )}
-      {animo === "curiosa" && (
-        <path
-          d="M28.5 39.2c2.3 1.8 4.7 1.8 7 0"
-          stroke="#fdfaf2"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          fill="none"
-        />
-      )}
-      {animo === "sorprendida" && (
-        <ellipse cx="32" cy="40" rx="3.4" ry="4" fill="#1c3a31" stroke="#fdfaf2" strokeWidth="1.8" />
-      )}
+      {/* Sonrisa de tiza */}
+      <path
+        d="M26.5 38.5c3.4 3.1 7.6 3.1 11 0"
+        stroke="#fdfaf2"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        fill="none"
+      />
       {/* Bandeja con su tiza blanca */}
       <rect x="9" y="52" width="46" height="5.5" rx="2.75" fill="#c9863c" />
       <g transform="rotate(-7 40 50.9)">

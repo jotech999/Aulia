@@ -10,7 +10,6 @@ import {
 } from "@/lib/calificaciones";
 import { formatearFechaLarga, hoyEnSantiago, isoDesdeFecha, fechaDesdeISO } from "@/lib/fecha";
 import { Iconos } from "@/components/ui/iconos";
-import { Auli } from "@/components/ui/auli";
 import { AccesosRapidos } from "@/components/ui/accesos-rapidos";
 import { Sparkline } from "@/components/ui/graficos";
 import { TarjetaKPI } from "@/components/ui/tarjeta-kpi";
@@ -305,16 +304,11 @@ export async function PanelProfesor({
               Tus cursos y pendientes de hoy · {colegioNombre}
             </p>
           </div>
-          <div className="flex items-center gap-3.5">
-            <span className="levitar hidden sm:block" aria-hidden>
-              <Auli className="h-14 w-14 drop-shadow-lg" />
-            </span>
-            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-right backdrop-blur-sm">
-              <p className="text-[11px] uppercase tracking-wider text-white/60">Hoy</p>
-              <p className="mt-0.5 text-sm font-semibold capitalize text-white">
-                {formatearFechaLarga(hoy)}
-              </p>
-            </div>
+          <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-right backdrop-blur-sm">
+            <p className="text-[11px] uppercase tracking-wider text-white/60">Hoy</p>
+            <p className="mt-0.5 text-sm font-semibold capitalize text-white">
+              {formatearFechaLarga(hoy)}
+            </p>
           </div>
         </div>
       </header>

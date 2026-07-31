@@ -7,6 +7,8 @@ import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { colorAsignatura } from "@/lib/colores-asignatura";
 import { BotonEnlace } from "@/components/ui/boton";
 import { Banco } from "./banco-cliente";
+import { GeneradorEnsayo } from "./ensayo-cliente";
+import { iaDisponible } from "@/lib/ia/cliente";
 import { nombreCurso } from "@/lib/cursos";
 
 
@@ -87,6 +89,9 @@ export default async function EvaluacionesPage({
         volver={{ href: "/libro-clases/evaluaciones", etiqueta: "Cambiar asignatura" }}
         acciones={<BotonEnlace href="/libro-clases/rubricas" variante="secundario">Rúbricas y pautas</BotonEnlace>}
       />
+
+      {/* Ensayos SIMCE/PAES con IA */}
+      <GeneradorEnsayo asignaturaId={asignaturaSel.id} disponible={iaDisponible()} />
 
       {/* Quizzes existentes */}
       <section className="mt-5">

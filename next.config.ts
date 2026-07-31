@@ -5,6 +5,24 @@ const nextConfig: NextConfig = {
   // Errores de tipos pendientes no bloquean el deploy (se corrigen en dev)
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  async redirects() {
+    // Dominio canónico: cualquier visita al subdominio técnico de Render
+    // (marcadores viejos, historial, PWA instalada) rebota a aulia.cl.
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "aulia-gwfx.onrender.com" }],
+        destination: "https://aulia.cl/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.aulia.cl" }],
+        destination: "https://aulia.cl/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     const politica = [
       "default-src 'self'",

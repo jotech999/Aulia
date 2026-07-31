@@ -56,16 +56,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-CL" style={fontVars} suppressHydrationWarning>
-      <head>
-        {/* Aplica el tema guardado ANTES del primer pintado (evita destello). */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              '(function(){try{var t=localStorage.getItem("aulia:tema");if(t==="oscuro"||(t===null&&matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.dataset.tema="oscuro"}}catch(e){}})()',
-          }}
-        />
-      </head>
+    <html lang="es-CL" style={fontVars}>
       <body className="min-h-screen antialiased font-body">{children}</body>
     </html>
   );

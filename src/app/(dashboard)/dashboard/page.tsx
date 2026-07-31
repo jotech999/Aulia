@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requerirSesion } from "@/lib/sesion";
 import { formatearFechaLarga, hoyEnSantiago, fechaDesdeISO } from "@/lib/fecha";
 import { Iconos } from "@/components/ui/iconos";
+import { Auli } from "@/components/ui/auli";
 import { NOTA_APROBACION } from "@/lib/calificaciones";
 import { ESTILO_EVENTO, type TipoEventoVista } from "@/lib/calendario";
 import { PanelDireccion } from "./panel-direccion";
@@ -205,6 +206,9 @@ async function PanelApoderado({
     <div className="animar-surgir">
       <header className="encabezado-cine malla-academica estrellas relative overflow-hidden rounded-2xl px-6 py-7 shadow-elevada sm:px-8"><span className="aurora-luz aurora-luz-1" aria-hidden /><span className="aurora-luz aurora-luz-2" aria-hidden />
         <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent" aria-hidden />
+        <span className="levitar absolute right-6 top-1/2 hidden -translate-y-1/2 sm:block" aria-hidden>
+          <Auli className="h-14 w-14 drop-shadow-lg" />
+        </span>
         <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{fechaHoy}</p>
         <h1 className="mt-1.5 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
           Hola{nombre ? `, ${nombre.split(" ")[0]}` : ""}
@@ -400,6 +404,9 @@ async function PanelPie({
     <div className="animar-surgir">
       <header className="encabezado-cine malla-academica estrellas relative overflow-hidden rounded-2xl px-6 py-7 shadow-elevada sm:px-8"><span className="aurora-luz aurora-luz-1" aria-hidden /><span className="aurora-luz aurora-luz-2" aria-hidden />
         <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-acento/70 to-transparent" aria-hidden />
+        <span className="levitar absolute right-6 top-1/2 hidden -translate-y-1/2 sm:block" aria-hidden>
+          <Auli className="h-14 w-14 drop-shadow-lg" />
+        </span>
         <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{fechaHoy}</p>
         <h1 className="mt-1.5 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
           Hola{nombre ? `, ${nombre.split(" ")[0]}` : ""}

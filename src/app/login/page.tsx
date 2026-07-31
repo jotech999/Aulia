@@ -4,6 +4,7 @@ import { AuthError } from "next-auth";
 import { auth, signIn, googleDisponible } from "@/lib/auth";
 import { Boton } from "@/components/ui/boton";
 import { Isotipo } from "@/components/ui/isotipo";
+import { Auli } from "@/components/ui/auli";
 
 async function iniciarSesion(formData: FormData) {
   "use server";
@@ -51,9 +52,14 @@ export default async function LoginPage({
         </Link>
 
         <div className="max-w-md">
-          <span className="insignia bg-white/10 text-white/80 ring-1 ring-white/15">
-            Plataforma escolar chilena
+          <span className="levitar inline-block" aria-hidden>
+            <Auli className="h-20 w-20 drop-shadow-lg" />
           </span>
+          <div className="mt-5">
+            <span className="insignia bg-white/10 text-white/80 ring-1 ring-white/15">
+              Plataforma escolar chilena
+            </span>
+          </div>
           <h2 className="mt-4 font-display text-4xl font-bold leading-[1.08] tracking-tight text-white">
             El libro de clases, por fin rápido y claro.
           </h2>

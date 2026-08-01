@@ -39,6 +39,8 @@ const SUGERENCIAS: Record<string, string[]> = {
     "Lista los cursos disponibles",
   ],
   APODERADO: [
+    "¿Cuándo es la próxima prueba de mi pupilo?",
+    "¿Qué comunicados no he leído?",
     "¿Cómo va la asistencia de mi pupilo?",
     "¿Mi pupilo tiene alguna alerta?",
     "¿En qué curso está mi pupilo?",

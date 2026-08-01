@@ -126,6 +126,18 @@ export const HERRAMIENTAS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "proximas_evaluaciones",
+    description:
+      "Las próximas evaluaciones agendadas (nombre, asignatura, curso y fecha). Para el apoderado: solo las de los cursos de sus pupilos. Para docentes: las de sus cursos. Úsala cuando pregunten cuándo es la próxima prueba, qué evaluaciones vienen o qué hay agendado.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "comunicados_pendientes",
+    description:
+      "SOLO PARA APODERADOS: los comunicados del colegio que aún no han leído (título y fecha) y cuántos son. Úsala cuando un apoderado pregunte qué comunicados tiene, si hay avisos nuevos o qué le ha enviado el colegio.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "ficha_estudiante",
     description:
       "Ficha académica mínima de un estudiante (curso, % de asistencia, promedio general, nº de anotaciones negativas). No incluye datos de salud, RUT ni contacto. Requiere el id obtenido de buscar_estudiantes.",
@@ -163,6 +175,10 @@ export async function ejecutarHerramienta(
       return pendientesOperativos(user);
     case "horario_hoy":
       return horarioHoy(user);
+    case "proximas_evaluaciones":
+      return proximasEvaluaciones(user);
+    case "comunicados_pendientes":
+      return comunicadosPendientes(user);
     default:
       return { salida: { error: `Herramienta desconocida: ${nombre}` } };
   }
@@ -626,6 +642,81 @@ async function horarioHoy(user: UsuarioIA): Promise<ResultadoHerramienta> {
         estado:
           ahora >= b.horaFin ? "dictada" : ahora >= b.horaInicio ? "en curso" : "próxima",
       })),
+    },
+  };
+}
+
+// ── Próximas evaluaciones (alcance por rol) ─────────────────────────────────
+
+async function proximasEvaluaciones(user: UsuarioIA): Promise<ResultadoHerramienta> {
+  const { hoyEnSantiago, fechaDesdeISO } = await import("@/lib/fecha");
+  const evaluaciones = await prisma.evaluacion.findMany({
+    where: {
+      colegioId: user.colegioId,
+      eliminadaEn: null,
+      fecha: { gte: fechaDesdeISO(hoyEnSantiago()) },
+      asignatura: { curso: alcanceCursos(user) },
+    },
+    select: {
+      nombre: true,
+      tipo: true,
+      fecha: true,
+      asignatura: {
+        select: { nombre: true, curso: { select: { nivel: true, letra: true } } },
+      },
+    },
+    orderBy: { fecha: "asc" },
+    take: 12,
+  });
+  if (!evaluaciones.length) {
+    return { salida: { mensaje: "No hay evaluaciones agendadas hacia adelante." } };
+  }
+  return {
+    salida: {
+      evaluaciones: evaluaciones.map((e) => ({
+        fecha: e.fecha.toISOString().slice(0, 10),
+        evaluacion: e.nombre,
+        tipo: e.tipo,
+        asignatura: e.asignatura.nombre,
+        curso: `${e.asignatura.curso.nivel} ${e.asignatura.curso.letra}`,
+      })),
+    },
+    auditar: {
+      entidad: "evaluaciones:proximas",
+      entidadId: user.colegioId,
+      meta: { herramienta: "proximas_evaluaciones" },
+    },
+  };
+}
+
+// ── Comunicados sin leer (solo apoderado) ───────────────────────────────────
+
+async function comunicadosPendientes(user: UsuarioIA): Promise<ResultadoHerramienta> {
+  if (user.rol !== "APODERADO") {
+    return { salida: { error: "Esta consulta es solo para apoderados." } };
+  }
+  const pendientes = await prisma.comunicadoDestinatario.findMany({
+    where: {
+      colegioId: user.colegioId,
+      apoderadoUsuarioId: user.id,
+      leidoEn: null,
+      comunicado: { eliminadoEn: null },
+    },
+    select: { comunicado: { select: { titulo: true, creadoEn: true } } },
+    orderBy: { comunicado: { creadoEn: "desc" } },
+    take: 10,
+  });
+  if (!pendientes.length) {
+    return { salida: { mensaje: "No hay comunicados sin leer. ¡Al día!" } };
+  }
+  return {
+    salida: {
+      sinLeer: pendientes.length,
+      comunicados: pendientes.map((p) => ({
+        titulo: p.comunicado.titulo,
+        fecha: p.comunicado.creadoEn.toISOString().slice(0, 10),
+      })),
+      nota: "El detalle se lee en el módulo Comunicación.",
     },
   };
 }

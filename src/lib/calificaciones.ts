@@ -200,6 +200,8 @@ export const guardarEvaluacionSchema = z.object({
     .max(1000),
   periodo: z.number().int().min(1).max(3).default(1),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha YYYY-MM-DD"),
+  // Qué entra en la evaluación (contenidos/temario); lo ven los apoderados.
+  contenidos: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 export type GuardarEvaluacionInput = z.infer<typeof guardarEvaluacionSchema>;
 

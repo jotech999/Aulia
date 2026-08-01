@@ -319,6 +319,7 @@ export function Libreta({
       ponderacion: Number(form.get("ponderacion") ?? 0),
       periodo,
       fecha: String(form.get("fecha") ?? ""),
+      contenidos: String(form.get("contenidos") ?? ""),
     });
     if (res.ok) {
       setNuevaAbierta(false);
@@ -688,6 +689,16 @@ export function Libreta({
               type="date"
               required
               className="mt-0.5 block rounded-lg border border-borde px-2 py-1.5 text-sm"
+            />
+          </label>
+          <label className="w-full text-xs font-medium text-tinta-tenue">
+            Contenido (qué entra — lo ven los apoderados)
+            <textarea
+              name="contenidos"
+              rows={2}
+              maxLength={1000}
+              placeholder="Unidades, temas, habilidades…"
+              className="mt-0.5 block w-full resize-y rounded-lg border border-borde px-2 py-1.5 text-sm"
             />
           </label>
           <button type="submit" className="btn btn-primario">

@@ -35,6 +35,7 @@ type EventoDia = {
   curso: string | null;
   // Punto de color por asignatura (solo evaluaciones): convención del colegio.
   colorPunto?: string;
+  detalle?: string; // contenidos de la evaluación (tooltip)
 };
 
 export default async function CalendarioPage({
@@ -115,6 +116,7 @@ export default async function CalendarioPage({
       select: {
         nombre: true,
         fecha: true,
+        contenidos: true,
         asignatura: { select: { nombre: true, color: true, curso: { select: { nivel: true, letra: true } } } },
       },
       orderBy: { fecha: "asc" },
@@ -192,6 +194,7 @@ export default async function CalendarioPage({
       tipo: "EVALUACION",
       curso: nombreCurso(ev.asignatura.curso),
       colorPunto: colorAsignatura(ev.asignatura.nombre, ev.asignatura.color).punto,
+      detalle: ev.contenidos ?? undefined,
     });
   }
 
@@ -351,7 +354,7 @@ export default async function CalendarioPage({
                       {items.slice(0, 3).map((ev, j) => (
                         <div
                           key={j}
-                          title={`${ESTILO_EVENTO[ev.tipo].etiqueta}: ${ev.titulo}${ev.curso ? ` (${ev.curso})` : ""}`}
+                          title={`${ESTILO_EVENTO[ev.tipo].etiqueta}: ${ev.titulo}${ev.curso ? ` (${ev.curso})` : ""}${ev.detalle ? `. Contenido: ${ev.detalle}` : ""}`}
                           className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] leading-tight transition-all duration-150 hover:-translate-y-px hover:shadow-sm ${ESTILO_EVENTO[ev.tipo].suave}`}
                         >
                           {ev.colorPunto && (

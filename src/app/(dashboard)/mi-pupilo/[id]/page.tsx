@@ -100,6 +100,7 @@ export default async function MiPupiloPage({
                 tipo: true,
                 ponderacion: true,
                 fecha: true,
+                contenidos: true,
                 calificaciones: {
                   where: { estudianteId: id, eliminadaEn: null },
                   select: { nota: true, eximida: true },
@@ -134,7 +135,7 @@ export default async function MiPupiloPage({
     .flatMap((a) =>
       a.evaluaciones
         .filter((e) => isoDesdeFecha(e.fecha) >= hoy && !e.calificaciones[0])
-        .map((e) => ({ asignatura: a.nombre, nombre: e.nombre, fecha: e.fecha }))
+        .map((e) => ({ asignatura: a.nombre, nombre: e.nombre, fecha: e.fecha, contenidos: e.contenidos }))
     )
     .sort((x, y) => x.fecha.getTime() - y.fecha.getTime())
     .slice(0, 6);
@@ -366,6 +367,11 @@ export default async function MiPupiloPage({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-tinta">{p.nombre}</p>
                   <p className="text-xs text-tinta-tenue">{p.asignatura}</p>
+                  {p.contenidos ? (
+                    <p className="mt-1 text-xs leading-snug text-tinta-suave">
+                      <span className="font-semibold text-tinta-tenue">Qué entra:</span> {p.contenidos}
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}

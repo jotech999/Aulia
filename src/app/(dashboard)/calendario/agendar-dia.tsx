@@ -45,6 +45,7 @@ export function AgendarDia({
   const [tituloPersonal, setTituloPersonal] = useState("");
   const [asignaturaId, setAsignaturaId] = useState(asignaturas[0]?.id ?? "");
   const [nombre, setNombre] = useState("");
+  const [contenidos, setContenidos] = useState("");
   const [tipo, setTipo] = useState<"SUMATIVA" | "FORMATIVA">("SUMATIVA");
   const [ponderacion, setPonderacion] = useState(30);
   const [error, setError] = useState<string | null>(null);
@@ -83,10 +84,12 @@ export function AgendarDia({
         ponderacion,
         periodo: semestreEscolar(iso.slice(0, 7)),
         fecha: iso,
+        contenidos,
       });
       if (r.ok) {
         toast.exito("Evaluación agendada. Los apoderados del curso la verán en su calendario.");
         setNombre("");
+        setContenidos("");
         setAbierto(false);
         router.refresh();
       } else {
@@ -245,6 +248,14 @@ export function AgendarDia({
                 maxLength={160}
                 autoFocus
                 className="w-full rounded-lg border border-borde px-2 py-1.5 text-sm"
+              />
+              <textarea
+                value={contenidos}
+                onChange={(e) => setContenidos(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Contenido de la evaluación (qué entra): unidades, temas, habilidades…"
+                className="w-full resize-y rounded-lg border border-borde px-2 py-1.5 text-sm"
               />
               <div className="flex gap-2">
                 <select

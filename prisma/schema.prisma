@@ -688,6 +688,7 @@ model Evaluacion {
   ponderacion    Float     @default(1) // peso relativo (>0); el Decreto 67 no obliga a sumar 100
   periodo        Int       @default(1) // 1..2 semestral, 1..3 trimestral (según AnioEscolar.regimen)
   fecha          DateTime  @db.Date
+  contenidos     String? // qué entra en la evaluación (lo ven los apoderados)
   creadaEn       DateTime  @default(now())
   actualizadaEn  DateTime  @updatedAt
   // Soft delete normativo (Circular 30): nunca DELETE físico

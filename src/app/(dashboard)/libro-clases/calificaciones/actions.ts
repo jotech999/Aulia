@@ -71,7 +71,7 @@ async function asignaturaAutorizada(
 export async function crearEvaluacion(input: unknown): Promise<Resultado<{ id: string }>> {
   const parsed = guardarEvaluacionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
-  const { asignaturaId, nombre, tipo, ponderacion, periodo, fecha } = parsed.data;
+  const { asignaturaId, nombre, tipo, ponderacion, periodo, fecha, contenidos } = parsed.data;
 
   if (!esFechaISOValida(fecha)) return { ok: false, error: "Fecha inválida." };
 
@@ -100,6 +100,7 @@ export async function crearEvaluacion(input: unknown): Promise<Resultado<{ id: s
         ponderacion,
         periodo,
         fecha: fechaDesdeISO(fecha),
+        contenidos: contenidos || null,
       },
       select: { id: true },
     });

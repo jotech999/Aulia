@@ -114,10 +114,11 @@ export default async function CalendarioPage({
           : whereAsignaturasFirma(user),
       },
       select: {
+        id: true,
         nombre: true,
         fecha: true,
         contenidos: true,
-        asignatura: { select: { nombre: true, color: true, curso: { select: { nivel: true, letra: true } } } },
+        asignatura: { select: { id: true, nombre: true, color: true, curso: { select: { nivel: true, letra: true } } } },
       },
       orderBy: { fecha: "asc" },
     }),
@@ -242,6 +243,39 @@ export default async function CalendarioPage({
     else porDia.set(iso, [feriado]);
   }
 
+  // Lo que ESTE usuario puede borrar desde el día (equivocaciones): sus
+  // evaluaciones (el query ya viene acotado a su alcance docente) y sus notas
+  // personales. El apoderado solo sus notas.
+  const borrablesPorDia = new Map<
+    string,
+    { clase: "evaluacion" | "personal"; id: string; asignaturaId?: string; titulo: string }[]
+  >();
+  const agregarBorrable = (
+    iso: string,
+    item: { clase: "evaluacion" | "personal"; id: string; asignaturaId?: string; titulo: string }
+  ) => {
+    const lista = borrablesPorDia.get(iso);
+    if (lista) lista.push(item);
+    else borrablesPorDia.set(iso, [item]);
+  };
+  if (!esVistaPersonal && puedeEvaluar) {
+    for (const ev of evaluaciones) {
+      agregarBorrable(ev.fecha.toISOString().slice(0, 10), {
+        clase: "evaluacion",
+        id: ev.id,
+        asignaturaId: ev.asignatura.id,
+        titulo: `${ev.nombre} · ${ev.asignatura.nombre}`,
+      });
+    }
+  }
+  for (const p of personales) {
+    agregarBorrable(p.fecha.toISOString().slice(0, 10), {
+      clase: "personal",
+      id: p.id,
+      titulo: p.titulo,
+    });
+  }
+
   const semanas = construirMes(mes);
   const hoy = hoyEnSantiago();
   const totalEventos = eventos.length + evaluaciones.length;
@@ -341,6 +375,7 @@ export default async function CalendarioPage({
                     claseCelda={claseCelda}
                     columna={semana.indexOf(celda)}
                     haciaArriba={i >= semanas.length - 2}
+                    agendados={borrablesPorDia.get(celda.iso) ?? []}
                     asignaturas={
                       puedeEvaluar
                         ? misAsignaturas.map((a) => ({

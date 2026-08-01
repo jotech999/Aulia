@@ -13,7 +13,9 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { crearEvaluacion } from "../libro-clases/calificaciones/actions";
-import { crearEventoPersonal } from "./actions";
+import { crearEventoPersonal, eliminarEventoPersonal } from "./actions";
+import { eliminarEvaluacion } from "../libro-clases/calificaciones/actions";
+import { confirmar } from "@/components/ui/confirmar";
 import { semestreEscolar } from "@/lib/fecha";
 import { toast } from "@/components/ui/toast";
 
@@ -27,6 +29,7 @@ export function AgendarDia({
   asignaturas,
   columna,
   haciaArriba,
+  agendados = [],
   children,
 }: {
   iso: string; // YYYY-MM-DD del día tocado
@@ -36,6 +39,13 @@ export function AgendarDia({
   asignaturas: { id: string; nombre: string }[];
   columna: number; // 0=lunes … 6=domingo (para alinear el popover)
   haciaArriba: boolean; // últimas semanas: abrir hacia arriba
+  /** Lo agendado ese día que ESTE usuario puede eliminar (equivocaciones). */
+  agendados?: {
+    clase: "evaluacion" | "personal";
+    id: string;
+    asignaturaId?: string;
+    titulo: string;
+  }[];
   children?: React.ReactNode; // los eventos del día (server-rendered)
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -105,6 +115,32 @@ export function AgendarDia({
       if (r.ok) {
         toast.exito("Nota personal guardada. Solo tú la ves.");
         setTituloPersonal("");
+        setAbierto(false);
+        router.refresh();
+      } else {
+        setError(r.error);
+      }
+    });
+  }
+
+  async function borrar(item: NonNullable<typeof agendados>[number]) {
+    const ok = await confirmar({
+      titulo: `¿Eliminar "${item.titulo}"?`,
+      mensaje:
+        item.clase === "evaluacion"
+          ? "Se elimina la evaluación y sus notas (queda registrado en el libro)."
+          : "Es una nota personal tuya; se borra solo de tu calendario.",
+      textoConfirmar: "Eliminar",
+      peligro: true,
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const r =
+        item.clase === "evaluacion"
+          ? await eliminarEvaluacion(item.asignaturaId ?? "", item.id)
+          : await eliminarEventoPersonal(item.id);
+      if (r.ok) {
+        toast.exito("Eliminado.");
         setAbierto(false);
         router.refresh();
       } else {
@@ -301,6 +337,32 @@ export function AgendarDia({
                 </button>
               </div>
             </div>
+            )}
+
+            {agendados.length > 0 && (
+              <div className="mt-3 border-t border-borde pt-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-tinta-tenue">
+                  Agendado este día
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {agendados.map((item) => (
+                    <li key={`${item.clase}-${item.id}`} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-xs text-tinta-suave">
+                        {item.clase === "personal" ? "· Personal: " : "· "}
+                        {item.titulo}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void borrar(item)}
+                        disabled={pendiente}
+                        className="shrink-0 text-[11px] font-semibold text-peligro hover:underline disabled:opacity-50"
+                      >
+                        Eliminar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </>

@@ -16,11 +16,10 @@ import {
   hoyEnSantiago,
   rangoMes,
   formatearMesLargo,
-  esFechaISOValida,
 } from "@/lib/fecha";
 import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { NuevoEvento } from "./nuevo-evento";
-import { NuevaEvaluacion } from "./nueva-evaluacion";
+import { AgendarDia } from "./agendar-dia";
 import { BotonEliminarEvento } from "./boton-eliminar";
 import { nombreCurso } from "@/lib/cursos";
 
@@ -60,9 +59,7 @@ export default async function CalendarioPage({
   const esApoderado = user.rol === "APODERADO";
   const esEstudiante = user.rol === "ESTUDIANTE";
   const esVistaPersonal = esApoderado || esEstudiante;
-  // Día preseleccionado (clic en el calendario) → abre el formulario con esa fecha.
-  const diaSel =
-    (puedeGestionar || puedeEvaluar) && sp.dia && esFechaISOValida(sp.dia) ? sp.dia : null;
+
 
   // El apoderado solo ve eventos del colegio + de los cursos de sus pupilos, y
   // las evaluaciones de esos cursos (Ley 21.719: nada de otros estudiantes).
@@ -269,26 +266,14 @@ export default async function CalendarioPage({
           {puedeGestionar && (
             <NuevoEvento
               cursos={cursos.map((c) => ({ id: c.id, nombre: nombreCurso(c) }))}
-              fechaInicial={diaSel ?? hoy}
+              fechaInicial={hoy}
               autoAbrir={false}
             />
           )}
         </div>
       </div>
 
-      {/* Agendar evaluación (docentes): se abre al tocar un día del calendario */}
-      {puedeEvaluar && (
-        <div className="mb-4">
-          <NuevaEvaluacion
-            asignaturas={misAsignaturas.map((a) => ({
-              id: a.id,
-              nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
-            }))}
-            fechaInicial={diaSel ?? hoy}
-            autoAbrir={diaSel !== null}
-          />
-        </div>
-      )}
+
 
       {/* Leyenda de tipos de evento (facilita la lectura del calendario) */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-borde bg-superficie px-4 py-2.5 text-xs text-tinta-suave">
@@ -334,15 +319,18 @@ export default async function CalendarioPage({
                             ? "text-tinta-suave"
                             : "text-tinta-tenue"
                       }`;
-                      return puedeGestionar || puedeEvaluar ? (
-                        <Link
-                          href={`/calendario?mes=${mes}&dia=${celda.iso}`}
-                          scroll={false}
-                          title="Agendar evaluación o evento este día"
-                          className={`${claseDia} transition-colors hover:ring-2 hover:ring-marca-300`}
-                        >
-                          {celda.dia}
-                        </Link>
+                      return puedeEvaluar && misAsignaturas.length > 0 ? (
+                        <AgendarDia
+                          iso={celda.iso}
+                          dia={celda.dia}
+                          claseDia={claseDia}
+                          columna={semana.indexOf(celda)}
+                          haciaArriba={i >= semanas.length - 2}
+                          asignaturas={misAsignaturas.map((a) => ({
+                            id: a.id,
+                            nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
+                          }))}
+                        />
                       ) : (
                         <div className={claseDia}>{celda.dia}</div>
                       );

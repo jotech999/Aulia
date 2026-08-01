@@ -825,3 +825,36 @@ export async function anularAplicacionRubrica(aplicacionId: string): Promise<Res
     return { ok: false, error: "No se pudo anular la aplicación. Reintenta." };
   }
 }
+
+/**
+ * Genera con IA el instrumento completo (criterios + niveles) a partir de la
+ * descripción de la evaluación. Devuelve datos para llenar el editor: la
+ * persona docente revisa, ajusta y recién ahí guarda el borrador.
+ */
+export async function generarRubricaConIA(input: unknown): Promise<
+  Resultado<{
+    nombre: string;
+    descripcion: string;
+    criterios: { descripcion: string; peso: number; niveles: { etiqueta: string; descriptor: string; puntaje: number }[] }[];
+  }>
+> {
+  const datos = input as { descripcionEvaluacion?: unknown; tipo?: unknown; contexto?: unknown };
+  const descripcionEvaluacion =
+    typeof datos.descripcionEvaluacion === "string" ? datos.descripcionEvaluacion : "";
+  const tipo = datos.tipo === "PAUTA_COTEJO" ? "PAUTA_COTEJO" : "RUBRICA";
+  const contexto = typeof datos.contexto === "string" ? datos.contexto.slice(0, 120) : "";
+
+  const { user } = await requerirSesion();
+  const puede =
+    ["ADMIN", "DIRECTOR", "UTP", "PROFESOR", "PROFESOR_JEFE"].includes(user.rol);
+  if (!puede) return { ok: false, error: "No tienes permiso para crear instrumentos." };
+
+  const { generarRubricaIA } = await import("@/lib/ia/rubrica");
+  const r = await generarRubricaIA(user, {
+    descripcionEvaluacion,
+    tipo,
+    contexto: contexto || undefined,
+  });
+  if (!r.ok) return r;
+  return { ok: true, nombre: r.nombre, descripcion: r.descripcion, criterios: r.criterios };
+}

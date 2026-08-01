@@ -58,6 +58,8 @@ export function Asistente({
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [entrada, setEntrada] = useState("");
   const [cargando, setCargando] = useState(false);
+  // Pregunta pendiente que llega desde otras partes de la interfaz (insights).
+  const [pendiente, setPendiente] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +78,27 @@ export function Asistente({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [abierto]);
+
+  // Apertura global: cualquier parte de la interfaz puede abrir a Auli con una
+  // pregunta lista (ej. las tarjetas del Radar Aulia del panel).
+  useEffect(() => {
+    function onAbrir(e: Event) {
+      const pregunta = (e as CustomEvent<{ pregunta?: string }>).detail?.pregunta;
+      setAbierto(true);
+      if (pregunta) setPendiente(pregunta);
+    }
+    window.addEventListener("aulia:abrir-auli", onAbrir);
+    return () => window.removeEventListener("aulia:abrir-auli", onAbrir);
+  }, []);
+
+  useEffect(() => {
+    if (abierto && pendiente && !cargando) {
+      const pregunta = pendiente;
+      setPendiente(null);
+      void enviar(pregunta);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto, pendiente, cargando]);
 
   async function enviar(texto: string) {
     const limpio = texto.trim();

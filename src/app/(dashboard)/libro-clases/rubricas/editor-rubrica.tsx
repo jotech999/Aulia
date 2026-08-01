@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { actualizarRubrica, crearRubrica } from "./actions";
+import { actualizarRubrica, crearRubrica, generarRubricaConIA } from "./actions";
 import { guardarRubricaSchema, type GuardarRubricaInput } from "@/lib/rubricas";
 import { confirmar } from "@/components/ui/confirmar";
 import { toast } from "@/components/ui/toast";
@@ -27,6 +27,7 @@ type Props = {
   asignaturas: AsignaturaEditorRubrica[];
   oas: OaEditorRubrica[];
   permiteGenerica: boolean;
+  iaActiva?: boolean;
 };
 
 const campo =
@@ -67,6 +68,7 @@ export function EditorRubrica({
   asignaturas,
   oas,
   permiteGenerica,
+  iaActiva = false,
 }: Props) {
   const router = useRouter();
   const [datos, setDatos] = useState<GuardarRubricaInput>(
@@ -75,6 +77,36 @@ export function EditorRubrica({
   const [busquedaOa, setBusquedaOa] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [descIA, setDescIA] = useState("");
+  const [generandoIA, setGenerandoIA] = useState(false);
+
+  // Genera el instrumento completo con IA y llena el editor (nada se guarda).
+  async function generarConIA() {
+    setError(null);
+    setGenerandoIA(true);
+    try {
+      const asignatura = asignaturas.find((a) => a.id === datos.asignaturaId);
+      const r = await generarRubricaConIA({
+        descripcionEvaluacion: descIA,
+        tipo: datos.tipo,
+        contexto: asignatura ? `${asignatura.nombre} · ${asignatura.curso}` : undefined,
+      });
+      if (r.ok) {
+        setDatos((actual) => ({
+          ...actual,
+          nombre: r.nombre,
+          descripcion: r.descripcion,
+          criterios: r.criterios,
+        }));
+        toast.exito("Instrumento generado. Revisa y ajusta antes de guardar.");
+      } else {
+        setError(r.error);
+        toast.error(r.error);
+      }
+    } finally {
+      setGenerandoIA(false);
+    }
+  }
 
   const oasDisponibles = useMemo(() => {
     const consulta = busquedaOa.trim().toLocaleLowerCase("es");
@@ -193,6 +225,43 @@ export function EditorRubrica({
 
   return (
     <div className="space-y-5">
+      {iaActiva && (
+        <section
+          className="rounded-xl border border-marca-200 bg-marca-50/70 p-4 sm:p-5"
+          aria-labelledby="generar-ia"
+        >
+          <h2 id="generar-ia" className="font-display text-lg font-semibold text-marca-800">
+            ✨ Generar con IA
+          </h2>
+          <p className="mt-0.5 text-sm text-marca-700">
+            Describe la evaluación y la IA propone el instrumento completo
+            ({datos.tipo === "PAUTA_COTEJO" ? "indicadores logrado / no logrado" : "criterios con 4 niveles de desempeño"}).
+            Luego revisas y ajustas cada descriptor antes de guardar.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={descIA}
+              onChange={(event) => setDescIA(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !generandoIA) void generarConIA();
+              }}
+              maxLength={1000}
+              placeholder="Ej: Disertación sobre pueblos originarios de Chile, 5° básico, con apoyo visual"
+              className="min-h-11 flex-1 rounded-lg border border-marca-200 bg-superficie px-3 py-2 text-sm"
+              disabled={generandoIA}
+            />
+            <Boton type="button" disabled={generandoIA || descIA.trim().length < 10} onClick={() => void generarConIA()}>
+              {generandoIA ? "Generando…" : "Generar instrumento"}
+            </Boton>
+          </div>
+          {generandoIA && (
+            <p className="mt-2 animate-pulse text-xs text-marca-700">
+              Diseñando criterios y descriptores observables…
+            </p>
+          )}
+        </section>
+      )}
+
       <section className="superficie rounded-xl p-4 sm:p-5" aria-labelledby="datos-instrumento">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

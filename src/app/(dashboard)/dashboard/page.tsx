@@ -50,6 +50,8 @@ export default async function DashboardPage() {
         colegioId={colegioId}
         nombre={sesion.user.name}
         colegioNombre={sesion.user.colegioNombre}
+        usuarioId={sesion.user.id}
+        rol={sesion.user.rol}
       />
     );
   }

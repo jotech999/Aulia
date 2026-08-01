@@ -284,6 +284,7 @@ export default async function CalificacionesPage({
             asignaturaId={asignaturaSel.id}
             periodo={periodoSel}
             densidad={densidad}
+            iaActiva={iaDisponible()}
             estudiantes={estudiantes}
             evaluaciones={evaluaciones.map((e) => ({
               id: e.id,

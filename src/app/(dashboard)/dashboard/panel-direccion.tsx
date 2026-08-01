@@ -13,6 +13,7 @@ import { TarjetaKPI } from "@/components/ui/tarjeta-kpi";
 import { AccesosRapidos } from "@/components/ui/accesos-rapidos";
 import { ResumenEjecutivo } from "./resumen-ejecutivo-cliente";
 import { iaDisponible } from "@/lib/ia/cliente";
+import { InsightsAulia } from "@/components/insights-aulia";
 import { nombreCurso, ordenarCursos } from "@/lib/cursos";
 
 const mesCorto = (ym: string) => {
@@ -26,10 +27,14 @@ export async function PanelDireccion({
   colegioId,
   nombre,
   colegioNombre,
+  usuarioId = "",
+  rol = "DIRECTOR",
 }: {
   colegioId: string;
   nombre?: string | null;
   colegioNombre?: string;
+  usuarioId?: string;
+  rol?: string;
 }) {
   const hoy = hoyEnSantiago();
 
@@ -259,6 +264,9 @@ export async function PanelDireccion({
 
       {/* Accesos rápidos: las gestiones de todos los días, a un toque */}
       <AccesosRapidos rol="DIRECTOR" />
+
+      {/* Radar Aulia: lo que los KPI no muestran, con salto directo a Auli */}
+      <InsightsAulia usuarioId={usuarioId} rol={rol} colegioId={colegioId} />
 
       {/* Alerta operativa: cursos donde aún nadie pasó la lista hoy */}
       {cursosSinLista.length > 0 && (

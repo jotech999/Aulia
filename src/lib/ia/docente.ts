@@ -341,6 +341,140 @@ Entrega exactamente ${numeroClases} clases mediante la herramienta entregar_clas
   }
 }
 
+// ── Generación ESTRUCTURADA de una UNIDAD completa (planificación mensual) ─────
+// Propone la unidad del mes: título, propósito con objetivos/actividades/
+// evaluación sugerida, y OA pertinentes del catálogo real. NO guarda nada:
+// el resultado llena el formulario para que la persona docente revise y guarde.
+
+export type UnidadGenerada = { titulo: string; descripcion: string; oaCodigos: string[] };
+export type ResultadoUnidad = { ok: true; unidad: UnidadGenerada } | { ok: false; error: string };
+
+const HERRAMIENTA_UNIDAD: Anthropic.Tool = {
+  name: "entregar_unidad",
+  description: "Entrega la propuesta de unidad mensual de planificación.",
+  input_schema: {
+    type: "object",
+    properties: {
+      titulo: {
+        type: "string",
+        description: "Título de la unidad (ej. 'Unidad 5: Fracciones en la vida diaria').",
+      },
+      descripcion: {
+        type: "string",
+        description:
+          "Propósito de la unidad con: objetivos (citando códigos OA), actividades principales y evaluación sugerida (una formativa y una sumativa). Texto plano con saltos de línea, sin markdown.",
+      },
+      oaCodigos: {
+        type: "array",
+        items: { type: "string" },
+        description: "Códigos de OA que cubre la unidad, tomados SOLO de la lista entregada.",
+      },
+    },
+    required: ["titulo", "descripcion", "oaCodigos"],
+  },
+};
+
+export async function generarUnidadPlanificacion(
+  user: UsuarioDocente,
+  entrada: { asignaturaId: string; mesNombre: string; clasesDelMes: number; indicaciones?: string }
+): Promise<ResultadoUnidad> {
+  if (!iaDisponible()) {
+    return { ok: false, error: "La IA no está configurada. Falta ANTHROPIC_API_KEY." };
+  }
+  const asignatura = await prisma.asignatura.findFirst({
+    where: { id: entrada.asignaturaId, ...whereAsignaturasAccesibles(user) },
+    select: { nombre: true, curso: { select: { nivel: true } } },
+  });
+  if (!asignatura) return { ok: false, error: "No tienes acceso a esa asignatura." };
+
+  // Contexto real: unidades ya planificadas del año (títulos y OA usados), para
+  // que la propuesta continúe la progresión y no repita lo ya cubierto.
+  const previas = await prisma.planificacion.findMany({
+    where: {
+      asignaturaId: entrada.asignaturaId,
+      colegioId: user.colegioId,
+      tipo: "UNIDAD",
+      eliminadaEn: null,
+      esPlantilla: false,
+    },
+    orderBy: { fechaInicio: "asc" },
+    select: { titulo: true, oas: { select: { oaCodigo: true } } },
+    take: 15,
+  });
+  const oasUsados = new Set(previas.flatMap((p) => p.oas.map((o) => o.oaCodigo)));
+
+  const oas = await prisma.oa.findMany({
+    where: { nivel: asignatura.curso.nivel, asignatura: asignatura.nombre },
+    orderBy: { numero: "asc" },
+    select: { codigo: true, eje: true, descripcion: true },
+    take: 40,
+  });
+  const codigosValidos = new Set(oas.map((o) => o.codigo));
+  const listaOa = oas.length
+    ? oas
+        .map(
+          (o) =>
+            `- ${o.codigo} (${o.eje})${oasUsados.has(o.codigo) ? " [ya trabajado]" : ""}: ${o.descripcion}`
+        )
+        .join("\n")
+    : "(No hay OA cargados para este nivel/asignatura; deja oaCodigos vacío y proponlos como [propuesto] dentro de la descripción.)";
+
+  const contextoPrevio = previas.length
+    ? `Unidades ya planificadas este año (no las repitas; continúa la progresión):\n${previas.map((p) => `- ${p.titulo}`).join("\n")}`
+    : "Aún no hay unidades planificadas este año.";
+
+  const prompt = `Propón la UNIDAD de planificación del mes de ${entrada.mesNombre} para ${asignatura.nombre}, nivel ${asignatura.curso.nivel} (currículum chileno, Bases Curriculares Mineduc).
+El mes tiene aproximadamente ${entrada.clasesDelMes || "algunas"} clases disponibles: dimensiona la unidad a ese tiempo real.
+${entrada.indicaciones ? `Indicaciones del/de la docente: ${entrada.indicaciones}` : ""}
+
+${contextoPrevio}
+
+Objetivos de Aprendizaje del nivel (usa SOLO estos códigos en oaCodigos; prioriza los NO marcados como ya trabajados):
+${listaOa}
+
+Entrega la unidad mediante la herramienta entregar_unidad. En descripcion estructura así (texto plano, sin markdown):
+Objetivos: … (citando los códigos OA elegidos)
+Actividades principales: … (2 a 4 líneas, concretas y realizables)
+Evaluación sugerida: una formativa y una sumativa, en una línea cada una.`;
+
+  try {
+    const cliente = clienteIA();
+    const respuesta = await conReintento(() =>
+      cliente.messages.create({
+        model: IA_MODELO,
+        max_tokens: 1500,
+        system: SISTEMA_BASE,
+        tools: [HERRAMIENTA_UNIDAD],
+        tool_choice: { type: "tool", name: "entregar_unidad" },
+        messages: [{ role: "user", content: prompt }],
+      })
+    );
+    const bloque = respuesta.content.find(
+      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+    );
+    const x = (bloque?.input ?? {}) as Record<string, unknown>;
+    const titulo = typeof x.titulo === "string" ? x.titulo.trim().slice(0, 160) : "";
+    const descripcion = typeof x.descripcion === "string" ? x.descripcion.trim().slice(0, 2000) : "";
+    const oaCodigos = Array.isArray(x.oaCodigos)
+      ? [...new Set(x.oaCodigos.filter((o): o is string => typeof o === "string" && codigosValidos.has(o)))]
+      : [];
+    if (!titulo || !descripcion) {
+      return { ok: false, error: "La IA no devolvió una unidad válida. Intenta nuevamente." };
+    }
+
+    await auditar(user, "planificacion", {
+      asignaturaId: entrada.asignaturaId,
+      nivel: asignatura.curso.nivel,
+      mes: entrada.mesNombre,
+      tipo: "unidad-mensual",
+    });
+    return { ok: true, unidad: { titulo, descripcion, oaCodigos } };
+  } catch (err) {
+    console.error("[ia-unidad]", err instanceof Error ? err.message : "error");
+    return { ok: false, error: mensajeErrorIA(err).mensaje };
+  }
+}
+
 // ── Informe / retroalimentación anclado en DATOS REALES del estudiante ─────────
 // A diferencia del borrador de retroalimentación (que pide fortalezas/aspectos a
 // mano), esto reúne los datos reales del estudiante —minimizados: promedios,
@@ -442,6 +576,96 @@ Usa la escala 1.0–7.0 (aprobación 4.0). No inventes datos que no estén arrib
     return { ok: true, borrador };
   } catch (err) {
     console.error("[ia-informe]", err instanceof Error ? err.message : "error");
+    return { ok: false, error: mensajeErrorIA(err).mensaje };
+  }
+}
+
+// ── Comentario de retroalimentación por estudiante EN UNA ASIGNATURA ───────────
+// Para la libreta de notas: redacta un comentario breve y editable a partir de
+// las notas reales del estudiante en esa asignatura (+ su asistencia general).
+// Minimizado: nombre de pila, notas por evaluación y porcentaje de asistencia.
+
+export async function generarComentarioAsignatura(
+  user: UsuarioDocente,
+  entrada: { asignaturaId: string; estudianteId: string }
+): Promise<ResultadoInforme> {
+  if (!iaDisponible()) {
+    return { ok: false, error: "La IA no está configurada. Falta ANTHROPIC_API_KEY." };
+  }
+  try {
+    // Reautorización doble: asignatura en el alcance del docente Y estudiante
+    // en el alcance del usuario (multi-tenant).
+    const asig = await prisma.asignatura.findFirst({
+      where: { id: entrada.asignaturaId, ...whereAsignaturasAccesibles(user) },
+      select: {
+        nombre: true,
+        curso: { select: { nivel: true, letra: true } },
+        evaluaciones: {
+          where: { eliminadaEn: null },
+          orderBy: { fecha: "asc" },
+          select: {
+            nombre: true,
+            tipo: true,
+            ponderacion: true,
+            calificaciones: {
+              where: { estudianteId: entrada.estudianteId, eliminadaEn: null },
+              select: { nota: true, eximida: true },
+            },
+          },
+        },
+      },
+    });
+    if (!asig) return { ok: false, error: "No tienes acceso a esa asignatura." };
+
+    const est = await prisma.estudiante.findFirst({
+      where: { id: entrada.estudianteId, ...alcanceEstudiantes(user) },
+      select: { nombres: true },
+    });
+    if (!est) return { ok: false, error: "No tienes acceso a ese estudiante." };
+    const nombrePila = est.nombres.split(" ")[0];
+
+    const notas = asig.evaluaciones
+      .map((e) => {
+        const cal = e.calificaciones[0];
+        if (!cal || (cal.nota === null && !cal.eximida)) return null;
+        return `- ${e.nombre} (${e.tipo === "SUMATIVA" ? "sumativa" : "formativa"}): ${cal.eximida ? "eximido/a" : cal.nota!.toFixed(1)}`;
+      })
+      .filter(Boolean) as string[];
+    if (notas.length === 0) {
+      return { ok: false, error: "Este estudiante aún no tiene notas en la asignatura." };
+    }
+
+    const items: ItemPromedio[] = asig.evaluaciones
+      .filter((e) => e.tipo === "SUMATIVA")
+      .map((e) => {
+        const cal = e.calificaciones[0];
+        return { nota: cal?.eximida ? null : cal?.nota ?? null, ponderacion: e.ponderacion, computa: !cal?.eximida };
+      });
+    const prom = calcularPromedio(items).promedio;
+
+    const asistencias = await prisma.asistenciaDiaria.findMany({
+      where: { estudianteId: entrada.estudianteId, colegioId: user.colegioId },
+      select: { estado: true },
+    });
+    const resumen = calcularResumen(asistencias.map((a) => a.estado as EstadoAsistencia));
+
+    const prompt = `Redacta un comentario breve de retroalimentación para ${nombrePila}, estudiante de ${asig.curso.nivel} ${asig.curso.letra}, en la asignatura ${asig.nombre}. Basándote SOLO en estos datos:
+Notas registradas:
+${notas.join("\n")}
+Promedio en la asignatura: ${prom !== null ? prom.toFixed(1) : "sin promedio aún"}
+Asistencia general: ${resumen.porcentaje !== null ? `${resumen.porcentaje}%` : "sin registro"}
+
+Escribe 3 a 5 oraciones en un solo párrafo, cálidas y no estigmatizantes: reconoce lo logrado (evaluaciones con mejor nota), orienta lo que puede reforzar (evaluaciones bajo 4.0 o tendencia a la baja, si la hay) con una sugerencia concreta, y cierra con aliento. Sirve para el informe al hogar o una entrevista. Escala 1.0–7.0, aprobación 4.0. No inventes datos.`;
+
+    const borrador = await llamarIA(SISTEMA_BASE, prompt);
+    await auditar(user, "retroalimentacion", {
+      asignaturaId: entrada.asignaturaId,
+      estudianteId: entrada.estudianteId,
+      tipo: "comentario-asignatura",
+    });
+    return { ok: true, borrador };
+  } catch (err) {
+    console.error("[ia-comentario]", err instanceof Error ? err.message : "error");
     return { ok: false, error: mensajeErrorIA(err).mensaje };
   }
 }

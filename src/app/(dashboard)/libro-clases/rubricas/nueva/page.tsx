@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requerirSesion } from "@/lib/sesion";
+import { iaDisponible } from "@/lib/ia/cliente";
 import { ROLES_GESTION_RUBRICAS } from "@/lib/rubricas";
 import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
@@ -46,6 +47,7 @@ export default async function NuevaRubricaPage() {
         }))}
         oas={oas}
         permiteGenerica={esGestion}
+        iaActiva={iaDisponible()}
       />
     </div>
   );

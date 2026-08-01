@@ -11,6 +11,7 @@ import {
 import { formatearFechaLarga, hoyEnSantiago, isoDesdeFecha, fechaDesdeISO } from "@/lib/fecha";
 import { Iconos } from "@/components/ui/iconos";
 import { AccesosRapidos } from "@/components/ui/accesos-rapidos";
+import { InsightsAulia } from "@/components/insights-aulia";
 import { Sparkline } from "@/components/ui/graficos";
 import { TarjetaKPI } from "@/components/ui/tarjeta-kpi";
 import { Insignia } from "@/components/ui/insignia";
@@ -315,6 +316,9 @@ export async function PanelProfesor({
 
       {/* Accesos rápidos: las acciones de todos los días, a un toque */}
       <AccesosRapidos rol={rol} />
+
+      {/* Radar Aulia: insights automáticos con salto directo a Auli */}
+      <InsightsAulia usuarioId={usuarioId} rol={rol} colegioId={colegioId} />
 
       {/*
         Tus clases de hoy — la jornada del profesor (prioridad de la profesora:

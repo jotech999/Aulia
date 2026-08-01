@@ -10,6 +10,7 @@ import {
   type ItemPromedio,
 } from "@/lib/calificaciones";
 import {
+  comentarioEstudianteIA,
   crearEvaluacion,
   editarEvaluacion,
   eliminarEvaluacion,
@@ -66,6 +67,7 @@ export function Libreta({
   evaluaciones,
   calificaciones,
   densidad = "comodo",
+  iaActiva = false,
 }: {
   asignaturaId: string;
   periodo: number;
@@ -73,6 +75,7 @@ export function Libreta({
   evaluaciones: Evaluacion[];
   calificaciones: Calif[];
   densidad?: "comodo" | "compacto";
+  iaActiva?: boolean;
 }) {
   const router = useRouter();
   const compacto = densidad === "compacto";
@@ -91,6 +94,13 @@ export function Libreta({
   const [nuevaAbierta, setNuevaAbierta] = useState(false);
   const [colMenu, setColMenu] = useState<string | null>(null);
   const [puedeDeshacer, setPuedeDeshacer] = useState(false);
+  // Retroalimentación IA por estudiante (borrador editable, no se guarda solo).
+  const [retro, setRetro] = useState<{
+    estId: string;
+    nombre: string;
+    estado: "cargando" | "listo" | "error";
+    texto: string;
+  } | null>(null);
   const grid = useRef<HTMLTableElement>(null);
   // Pila de deshacer: cada paso es un grupo de celdas (un pegado = un paso).
   const undoStack = useRef<{ evId: string; estId: string; prev: Celda }[][]>([]);
@@ -366,6 +376,27 @@ export function Libreta({
     } else toast.error(res.error);
   }
 
+  // Genera el comentario de retroalimentación IA de un estudiante (borrador).
+  async function generarRetro(est: Estudiante) {
+    setRetro({ estId: est.id, nombre: est.nombre, estado: "cargando", texto: "" });
+    const r = await comentarioEstudianteIA({ asignaturaId, estudianteId: est.id });
+    setRetro(
+      r.ok
+        ? { estId: est.id, nombre: est.nombre, estado: "listo", texto: r.borrador }
+        : { estId: est.id, nombre: est.nombre, estado: "error", texto: r.error }
+    );
+  }
+
+  async function copiarRetro() {
+    if (!retro || retro.estado !== "listo") return;
+    try {
+      await navigator.clipboard.writeText(retro.texto);
+      toast.exito("Comentario copiado.");
+    } catch {
+      toast.error("No se pudo copiar. Selecciona el texto y copia manualmente.");
+    }
+  }
+
   return (
     <div className="mt-4">
       {puedeDeshacer && (
@@ -616,7 +647,20 @@ export function Libreta({
                       </span>
                     )}
                   </td>
-                  <td />
+                  <td className="px-1 text-center">
+                    {iaActiva && prom.promedio !== null && (
+                      <button
+                        type="button"
+                        onClick={() => void generarRetro(est)}
+                        disabled={retro?.estado === "cargando"}
+                        title={`Comentario de retroalimentación con IA para ${est.nombre}`}
+                        aria-label={`Comentario de retroalimentación con IA para ${est.nombre}`}
+                        className="rounded-lg px-1.5 py-0.5 text-sm opacity-60 transition-opacity hover:bg-marca-50 hover:opacity-100"
+                      >
+                        ✨
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -629,7 +673,61 @@ export function Libreta({
         celda vacía para dejarla pendiente, o escribe <strong>E</strong> para
         eximir. Puedes <strong>pegar desde Excel</strong> (una columna o un bloque)
         y <strong>deshacer</strong> con Ctrl+Z. Cada cambio se guarda solo y queda registrado.
+        {iaActiva && (
+          <>
+            {" "}Con <strong>✨</strong> al final de cada fila obtienes un borrador de
+            retroalimentación del estudiante.
+          </>
+        )}
       </p>
+
+      {retro && (
+        <section
+          aria-label={`Retroalimentación para ${retro.nombre}`}
+          className="mt-4 rounded-xl border border-marca-200 bg-marca-50/70 p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold text-marca-800">
+              ✨ Retroalimentación · {retro.nombre}
+            </p>
+            <button
+              type="button"
+              onClick={() => setRetro(null)}
+              className="text-sm text-tinta-tenue hover:text-tinta"
+              aria-label="Cerrar retroalimentación"
+            >
+              ✕
+            </button>
+          </div>
+          {retro.estado === "cargando" && (
+            <p className="mt-2 animate-pulse text-sm text-marca-700">
+              Analizando notas y asistencia…
+            </p>
+          )}
+          {retro.estado === "error" && (
+            <p className="mt-2 text-sm text-peligro">{retro.texto}</p>
+          )}
+          {retro.estado === "listo" && (
+            <>
+              <textarea
+                value={retro.texto}
+                onChange={(e) => setRetro({ ...retro, texto: e.target.value })}
+                rows={5}
+                className="mt-2 w-full rounded-lg border border-marca-200 bg-superficie px-3 py-2 text-sm leading-relaxed"
+                aria-label="Borrador de retroalimentación (editable)"
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => void copiarRetro()} className="btn btn-primario btn-sm">
+                  Copiar comentario
+                </button>
+                <span className="text-xs text-marca-700">
+                  Es un borrador: revísalo y edítalo antes de usarlo en informes o entrevistas.
+                </span>
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {evaluaciones.length === 0 && !nuevaAbierta && (
         <div className="mt-6 rounded-xl border border-dashed border-borde-fuerte bg-superficie p-8 text-center text-sm text-tinta-tenue">

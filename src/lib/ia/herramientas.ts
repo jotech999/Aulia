@@ -138,6 +138,37 @@ export const HERRAMIENTAS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "promedios_estudiante",
+    description:
+      "Promedios por asignatura y promedio general de un estudiante (escala 1.0–7.0). Para apoderados: solo sus pupilos. Requiere el id obtenido de buscar_estudiantes. Úsala cuando pregunten por las notas o promedios de un estudiante.",
+    input_schema: {
+      type: "object",
+      properties: {
+        estudianteId: { type: "string", description: "Id del estudiante (de buscar_estudiantes)." },
+      },
+      required: ["estudianteId"],
+    },
+  },
+  {
+    name: "anotaciones_curso",
+    description:
+      "Resumen AGREGADO de anotaciones de un curso en los últimos 30 días (recuento de positivas y negativas, sin nombres ni textos). Solo para el equipo del colegio. Úsala para preguntas sobre el clima o conducta general de un curso.",
+    input_schema: {
+      type: "object",
+      properties: {
+        nivel: { type: "string" },
+        letra: { type: "string" },
+      },
+      required: ["nivel", "letra"],
+    },
+  },
+  {
+    name: "mensajes_sin_leer",
+    description:
+      "Los mensajes directos que el usuario aún no lee: para docentes, mensajes de apoderados de sus estudiantes; para apoderados, respuestas del colegio sobre sus pupilos. Devuelve estudiante, fecha y un extracto. Úsala cuando pregunten si tienen mensajes nuevos o pendientes de responder.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "ficha_estudiante",
     description:
       "Ficha académica mínima de un estudiante (curso, % de asistencia, promedio general, nº de anotaciones negativas). No incluye datos de salud, RUT ni contacto. Requiere el id obtenido de buscar_estudiantes.",
@@ -179,6 +210,12 @@ export async function ejecutarHerramienta(
       return proximasEvaluaciones(user);
     case "comunicados_pendientes":
       return comunicadosPendientes(user);
+    case "promedios_estudiante":
+      return promediosEstudiante(user, entrada);
+    case "anotaciones_curso":
+      return anotacionesCurso(user, entrada);
+    case "mensajes_sin_leer":
+      return mensajesSinLeer(user);
     default:
       return { salida: { error: `Herramienta desconocida: ${nombre}` } };
   }
@@ -717,6 +754,181 @@ async function comunicadosPendientes(user: UsuarioIA): Promise<ResultadoHerramie
         fecha: p.comunicado.creadoEn.toISOString().slice(0, 10),
       })),
       nota: "El detalle se lee en el módulo Comunicación.",
+    },
+  };
+}
+
+// ── Promedios por asignatura de un estudiante ─────────────────────────────
+
+/**
+ * Promedios por asignatura y general de un estudiante (solo sumativas
+ * ponderan), reautorizando el alcance. Lista blanca: nombre, curso y notas
+ * agregadas; nada de RUT, salud ni contacto.
+ */
+async function promediosEstudiante(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { estudianteId } = z.object({ estudianteId: z.string().min(1).max(40) }).parse(entrada);
+
+  const estudiante = await prisma.estudiante.findFirst({
+    where: { AND: [{ id: estudianteId }, alcanceEstudiantes(user)] },
+    select: {
+      id: true,
+      nombres: true,
+      apellidos: true,
+      matriculas: {
+        where: { estado: "ACTIVA" },
+        select: { curso: { select: { id: true, nivel: true, letra: true } } },
+        take: 1,
+      },
+    },
+  });
+  if (!estudiante) {
+    return { salida: { error: "No tienes acceso a ese estudiante o no existe." } };
+  }
+  const curso = estudiante.matriculas[0]?.curso;
+  if (!curso) {
+    return { salida: { error: "El estudiante no tiene matrícula activa." } };
+  }
+
+  const asignaturas = await prisma.asignatura.findMany({
+    where: { cursoId: curso.id, colegioId: user.colegioId },
+    select: {
+      nombre: true,
+      evaluaciones: {
+        where: { eliminadaEn: null, tipo: "SUMATIVA" },
+        select: {
+          ponderacion: true,
+          calificaciones: {
+            where: { estudianteId, eliminadaEn: null },
+            select: { nota: true, eximida: true },
+          },
+        },
+      },
+    },
+    orderBy: { nombre: "asc" },
+  });
+
+  const porAsignatura = asignaturas
+    .map((a) => {
+      const items: ItemPromedio[] = a.evaluaciones.map((e) => {
+        const cal = e.calificaciones[0];
+        return {
+          nota: cal?.eximida ? null : cal?.nota ?? null,
+          ponderacion: e.ponderacion,
+          computa: !cal?.eximida,
+        };
+      });
+      return { asignatura: a.nombre, promedio: calcularPromedio(items).promedio };
+    })
+    .filter((p): p is { asignatura: string; promedio: number } => p.promedio !== null);
+  const general = promedioGeneral(porAsignatura.map((p) => p.promedio));
+
+  return {
+    salida: {
+      nombre: `${estudiante.apellidos}, ${estudiante.nombres}`,
+      curso: nombreCurso(curso),
+      promedioGeneral: general !== null ? Number(general.toFixed(1)) : null,
+      porAsignatura: porAsignatura.map((p) => ({
+        asignatura: p.asignatura,
+        promedio: Number(p.promedio.toFixed(1)),
+        bajoAprobacion: p.promedio < NOTA_APROBACION,
+      })),
+      nota: porAsignatura.length ? undefined : "Aún no hay notas registradas.",
+    },
+    auditar: {
+      entidad: "Estudiante",
+      entidadId: estudiante.id,
+      meta: { herramienta: "promedios_estudiante" },
+    },
+  };
+}
+
+// ── Anotaciones agregadas de un curso (últimos 30 días) ───────────────────
+
+async function anotacionesCurso(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  if (user.rol === "APODERADO" || user.rol === "ESTUDIANTE") {
+    return { salida: { error: "Esta consulta es solo para el equipo del colegio." } };
+  }
+  const { nivel, letra } = z
+    .object({ nivel: z.string().min(1).max(10), letra: z.string().min(1).max(4) })
+    .parse(entrada);
+  const curso = await resolverCurso(user, nivel, letra);
+  if (!curso) return { salida: { error: "Curso no encontrado o fuera de tu alcance." } };
+
+  const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const matriculas = await prisma.matricula.findMany({
+    where: { cursoId: curso.id, colegioId: user.colegioId, estado: "ACTIVA" },
+    select: { estudianteId: true },
+  });
+  const ids = matriculas.map((m) => m.estudianteId);
+
+  const grupos = await prisma.anotacion.groupBy({
+    by: ["tipo"],
+    where: {
+      colegioId: user.colegioId,
+      estudianteId: { in: ids },
+      eliminadaEn: null,
+      creadaEn: { gte: hace30 },
+    },
+    _count: { _all: true },
+  });
+  const positivas = grupos.find((g) => g.tipo === "POSITIVA")?._count._all ?? 0;
+  const negativas = grupos.find((g) => g.tipo === "NEGATIVA")?._count._all ?? 0;
+
+  return {
+    salida: {
+      curso: nombreCurso(curso),
+      periodo: "últimos 30 días",
+      estudiantes: ids.length,
+      anotacionesPositivas: positivas,
+      anotacionesNegativas: negativas,
+      nota: "Recuento agregado, sin nombres ni textos. El detalle está en el Libro de clases.",
+    },
+  };
+}
+
+// ── Mensajes directos sin leer del usuario ────────────────────────────────
+
+async function mensajesSinLeer(user: UsuarioIA): Promise<ResultadoHerramienta> {
+  if (user.rol === "ESTUDIANTE") {
+    return { salida: { error: "Los mensajes directos son entre apoderados y docentes." } };
+  }
+  const esApoderado = user.rol === "APODERADO";
+  // Docente/gestión: mensajes DE apoderados, de estudiantes en su alcance.
+  // Apoderado: respuestas DEL colegio, sobre sus pupilos.
+  const mensajes = await prisma.mensajeDirecto.findMany({
+    where: {
+      colegioId: user.colegioId,
+      leidoEn: null,
+      deApoderado: !esApoderado,
+      estudiante: alcanceEstudiantes(user),
+      ...(esApoderado ? {} : { NOT: { autorId: user.id } }),
+    },
+    select: {
+      cuerpo: true,
+      creadoEn: true,
+      estudiante: { select: { nombres: true, apellidos: true } },
+    },
+    orderBy: { creadoEn: "desc" },
+    take: 10,
+  });
+  if (!mensajes.length) {
+    return { salida: { mensaje: "No hay mensajes sin leer. ¡Al día!" } };
+  }
+  return {
+    salida: {
+      sinLeer: mensajes.length,
+      mensajes: mensajes.map((m) => ({
+        estudiante: `${m.estudiante.apellidos}, ${m.estudiante.nombres}`,
+        fecha: m.creadoEn.toISOString().slice(0, 10),
+        extracto: m.cuerpo.slice(0, 160),
+      })),
+      nota: "Responde desde el módulo Mensajes.",
     },
   };
 }

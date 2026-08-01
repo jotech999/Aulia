@@ -10,7 +10,7 @@ import {
   guardarPlanificacionSchema,
 } from "@/lib/planificacion";
 import { esFechaISOValida, fechaDesdeISO, isoDesdeFecha, hoyEnSantiago } from "@/lib/fecha";
-import { generarClasesPlanificacion } from "@/lib/ia/docente";
+import { generarClasesPlanificacion, generarUnidadPlanificacion } from "@/lib/ia/docente";
 import { generarCronograma } from "./calendario-planificacion";
 
 type Resultado<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -209,6 +209,46 @@ export async function generarClasesUnidad(
   revalidatePath("/planificacion");
   revalidatePath("/planificacion/cobertura");
   return { ok: true, cantidad: generado.clases.length };
+}
+
+/**
+ * Propone con IA una UNIDAD completa para un mes (título, propósito con
+ * objetivos/actividades/evaluación y OA del catálogo). NO guarda nada: el
+ * resultado llena el formulario y la persona docente revisa, ajusta y guarda.
+ */
+export async function proponerUnidadMes(
+  input: unknown
+): Promise<Resultado<{ titulo: string; descripcion: string; oaCodigos: string[] }>> {
+  const datos = input as {
+    asignaturaId?: unknown;
+    mesNombre?: unknown;
+    clasesDelMes?: unknown;
+    indicaciones?: unknown;
+  };
+  const asignaturaId = typeof datos.asignaturaId === "string" ? datos.asignaturaId : "";
+  const mesNombre = typeof datos.mesNombre === "string" ? datos.mesNombre.slice(0, 20) : "";
+  const clasesDelMes = Number(datos.clasesDelMes) || 0;
+  const indicaciones =
+    typeof datos.indicaciones === "string" ? datos.indicaciones.trim().slice(0, 500) : "";
+  if (!asignaturaId || !mesNombre) return { ok: false, error: "Datos inválidos." };
+
+  const { user } = await requerirSesion();
+  const asignatura = await prisma.asignatura.findFirst({
+    where: { id: asignaturaId, colegioId: user.colegioId },
+    select: { docenteId: true },
+  });
+  if (!asignatura || !autorizarPlanificacion(user.rol, user.id, asignatura)) {
+    return { ok: false, error: "No tienes permiso para planificar esta asignatura." };
+  }
+
+  const generado = await generarUnidadPlanificacion(user, {
+    asignaturaId,
+    mesNombre,
+    clasesDelMes,
+    indicaciones: indicaciones || undefined,
+  });
+  if (!generado.ok) return generado;
+  return { ok: true, ...generado.unidad };
 }
 
 /**

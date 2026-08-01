@@ -535,3 +535,24 @@ export async function guardarCalificacionesLote(
   revalidatePath("/libro-clases/calificaciones");
   return { ok: true, guardados, invalidos };
 }
+
+/**
+ * Comentario de retroalimentación con IA para UN estudiante en la asignatura,
+ * desde sus notas reales. Devuelve un borrador editable; no guarda nada.
+ */
+export async function comentarioEstudianteIA(
+  input: unknown
+): Promise<Resultado<{ borrador: string }>> {
+  const datos = input as { asignaturaId?: unknown; estudianteId?: unknown };
+  const asignaturaId = typeof datos.asignaturaId === "string" ? datos.asignaturaId : "";
+  const estudianteId = typeof datos.estudianteId === "string" ? datos.estudianteId : "";
+  if (!asignaturaId || !estudianteId) return { ok: false, error: "Datos inválidos." };
+
+  const auth = await asignaturaAutorizada(asignaturaId);
+  if (!auth.ok) return auth;
+
+  const { generarComentarioAsignatura } = await import("@/lib/ia/docente");
+  const r = await generarComentarioAsignatura(auth.user, { asignaturaId, estudianteId });
+  if (!r.ok) return r;
+  return { ok: true, borrador: r.borrador };
+}

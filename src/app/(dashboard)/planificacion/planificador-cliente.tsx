@@ -17,6 +17,7 @@ import {
   generarClasesUnidad,
   generarCronogramaUnidad,
   guardarComoPlantilla,
+  proponerUnidadMes,
 } from "./actions";
 
 type OaOpcion = { codigo: string; eje: string; numero: number; descripcion: string };
@@ -158,6 +159,9 @@ export function Planificador({
   const [numIA, setNumIA] = useState<Record<string, number>>({});
   const [generandoCron, setGenerandoCron] = useState<string | null>(null);
   const [numCron, setNumCron] = useState<Record<string, number>>({});
+  const [panelUnidadIA, setPanelUnidadIA] = useState(false);
+  const [indicacionesIA, setIndicacionesIA] = useState("");
+  const [proponiendoUnidad, setProponiendoUnidad] = useState(false);
   const mesSantiago = Number(
     new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Santiago",
@@ -215,6 +219,38 @@ export function Planificador({
     }, 400);
     return () => window.clearTimeout(timer);
   }, [borrador, claveBorrador]);
+
+  // Propone con IA la unidad completa del mes y llena el formulario para
+  // que la persona docente revise, ajuste y guarde (nada se guarda solo).
+  async function proponerUnidadIA() {
+    setError(null);
+    setProponiendoUnidad(true);
+    try {
+      const rango = rangoMes(anioEscolar, mesActivo);
+      const r = await proponerUnidadMes({
+        asignaturaId,
+        mesNombre: mesSeleccionado.nombre,
+        clasesDelMes: clasesPorMes[mesActivo] ?? 0,
+        indicaciones: indicacionesIA,
+      });
+      if (r.ok) {
+        setBorrador({
+          ...vacio(),
+          titulo: r.titulo,
+          descripcion: r.descripcion,
+          oaCodigos: r.oaCodigos,
+          fechaInicio: rango.inicio,
+          fechaFin: rango.fin,
+        });
+        setPanelUnidadIA(false);
+        setIndicacionesIA("");
+        toast.exito("Propuesta lista. Revisa, ajusta y guarda.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else setError(r.error);
+    } finally {
+      setProponiendoUnidad(false);
+    }
+  }
 
   // Genera con IA una secuencia de clases para la unidad y las inserta.
   async function generarClasesIA(unidadId: string, numeroClases: number) {
@@ -749,11 +785,56 @@ export function Planificador({
               </p>
             </div>
             {puedeEditar && (
-              <Boton type="button" variante="secundario" tamano="sm" onClick={abrirNuevaEnMes}>
-                + Unidad en {mesSeleccionado.nombre.toLowerCase()}
-              </Boton>
+              <div className="flex flex-wrap items-center gap-2">
+                {iaActiva && (
+                  <Boton
+                    type="button"
+                    tamano="sm"
+                    onClick={() => setPanelUnidadIA((v) => !v)}
+                    aria-expanded={panelUnidadIA}
+                  >
+                    ✨ Proponer unidad con IA
+                  </Boton>
+                )}
+                <Boton type="button" variante="secundario" tamano="sm" onClick={abrirNuevaEnMes}>
+                  + Unidad en {mesSeleccionado.nombre.toLowerCase()}
+                </Boton>
+              </div>
             )}
           </div>
+
+          {panelUnidadIA && puedeEditar && iaActiva && (
+            <div className="mt-3 rounded-xl border border-marca-200 bg-marca-50/70 p-3">
+              <p className="text-sm font-semibold text-marca-800">
+                ✨ Unidad de {mesSeleccionado.nombre.toLowerCase()} con IA
+              </p>
+              <p className="mt-0.5 text-xs text-marca-700">
+                Propone título, objetivos con OA del nivel, actividades y evaluación sugerida,
+                dimensionada a las clases del mes. Tú revisas, ajustas y guardas.
+              </p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={indicacionesIA}
+                  onChange={(e) => setIndicacionesIA(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !proponiendoUnidad) void proponerUnidadIA();
+                  }}
+                  placeholder="Opcional: tema o indicaciones (ej. 'fracciones, con material concreto')"
+                  className="min-h-11 flex-1 rounded-lg border border-marca-200 bg-superficie px-3 py-2 text-sm"
+                  disabled={proponiendoUnidad}
+                />
+                <Boton
+                  type="button"
+                  tamano="sm"
+                  disabled={proponiendoUnidad}
+                  onClick={() => void proponerUnidadIA()}
+                >
+                  {proponiendoUnidad ? "Generando…" : "Generar propuesta"}
+                </Boton>
+              </div>
+              {error && <p className="mt-2 text-sm text-peligro">{error}</p>}
+            </div>
+          )}
 
           {unidadesDelMes.length === 0 ? (
             <div className="mt-3">

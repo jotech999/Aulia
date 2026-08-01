@@ -2,9 +2,6 @@
 
 import { z } from "zod";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
-import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { estaBloqueado, registrarFallo } from "@/lib/rate-limit";
 
@@ -62,22 +59,5 @@ export async function solicitarDemo(input: unknown): Promise<Resultado> {
     return { ok: true };
   } catch {
     return { ok: false, error: "No se pudo registrar la solicitud. Intenta de nuevo." };
-  }
-}
-
-/**
- * DEMO EN VIVO: entra directo con la cuenta demo configurada en el entorno
- * (DEMO_EMAIL / DEMO_PASSWORD en Render), sin pedirle credenciales al
- * prospecto. Si no está configurada, cae al login normal.
- */
-export async function entrarDemoVivo(): Promise<void> {
-  const email = process.env.DEMO_EMAIL;
-  const password = process.env.DEMO_PASSWORD;
-  if (!email || !password) redirect("/login");
-  try {
-    await signIn("credentials", { email, password, redirectTo: "/dashboard" });
-  } catch (error) {
-    if (error instanceof AuthError) redirect("/login");
-    throw error; // los redirects de Next.js también lanzan — repropagar
   }
 }

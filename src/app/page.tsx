@@ -8,7 +8,6 @@ import { CalculadoraPrecio } from "@/components/landing/calculadora-precio";
 import { PulsoVivo } from "@/components/landing/pulso-vivo";
 import { AuliLanding } from "@/components/landing/auli-landing";
 import { PLANES, cotizar, formatearCLP, formatearUF } from "@/lib/precios";
-import { entrarDemoVivo } from "@/app/acciones-demo";
 
 export const metadata = {
   // `absolute` evita la plantilla "%s · Aulia" del layout: sin esto el título de
@@ -390,17 +389,6 @@ export default async function Home() {
                 <a href="#planes" className="rounded-xl border border-white/25 px-7 py-3.5 text-sm font-semibold text-white transition-all hover:border-white/50 hover:bg-white/10">
                   Ver precios
                 </a>
-                {Boolean(process.env.DEMO_EMAIL && process.env.DEMO_PASSWORD) && (
-                  <form action={entrarDemoVivo}>
-                    <button
-                      type="submit"
-                      className="rounded-xl border border-acento/50 bg-acento/10 px-7 py-3.5 text-sm font-semibold text-acento transition-all hover:border-acento hover:bg-acento/20"
-                      title="Explora la plataforma con datos de ejemplo, sin registrarte"
-                    >
-                      ▶ Probar la demo en vivo
-                    </button>
-                  </form>
-                )}
               </div>
               <p className="mt-5 text-sm text-white/50">
                 Prueba de 60 días · migración e implementación sin costo · precio publicado

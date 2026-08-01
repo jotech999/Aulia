@@ -13,6 +13,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { crearEvaluacion } from "../libro-clases/calificaciones/actions";
+import { crearEventoPersonal } from "./actions";
 import { semestreEscolar } from "@/lib/fecha";
 import { toast } from "@/components/ui/toast";
 
@@ -34,6 +35,10 @@ export function AgendarDia({
   haciaArriba: boolean; // últimas semanas: abrir hacia arriba
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [pestana, setPestana] = useState<"evaluacion" | "personal">(
+    asignaturas.length > 0 ? "evaluacion" : "personal"
+  );
+  const [tituloPersonal, setTituloPersonal] = useState("");
   const [asignaturaId, setAsignaturaId] = useState(asignaturas[0]?.id ?? "");
   const [nombre, setNombre] = useState("");
   const [tipo, setTipo] = useState<"SUMATIVA" | "FORMATIVA">("SUMATIVA");
@@ -86,6 +91,21 @@ export function AgendarDia({
     });
   }
 
+  function guardarPersonal() {
+    setError(null);
+    startTransition(async () => {
+      const r = await crearEventoPersonal({ titulo: tituloPersonal, fecha: iso });
+      if (r.ok) {
+        toast.exito("Nota personal guardada. Solo tú la ves.");
+        setTituloPersonal("");
+        setAbierto(false);
+        router.refresh();
+      } else {
+        setError(r.error);
+      }
+    });
+  }
+
   const fechaLegible = new Intl.DateTimeFormat("es-CL", {
     timeZone: "UTC",
     weekday: "long",
@@ -123,8 +143,71 @@ export function AgendarDia({
             } ${haciaArriba ? "bottom-full mb-1.5" : "top-full mt-1.5"}`}
           >
             <p className="text-sm font-bold capitalize text-tinta">{fechaLegible}</p>
-            <p className="mt-0.5 text-xs text-tinta-tenue">Agendar evaluación</p>
 
+            {asignaturas.length > 0 ? (
+              <div className="mt-2 flex gap-1">
+                {(
+                  [
+                    ["evaluacion", "Evaluación"],
+                    ["personal", "Personal"],
+                  ] as const
+                ).map(([id, etiqueta]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPestana(id)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                      pestana === id
+                        ? "bg-marca-600 text-white"
+                        : "border border-borde text-tinta-suave hover:text-tinta"
+                    }`}
+                  >
+                    {etiqueta}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-0.5 text-xs text-tinta-tenue">Nota personal</p>
+            )}
+
+            {pestana === "personal" && (
+              <div className="mt-2.5 space-y-2">
+                <input
+                  value={tituloPersonal}
+                  onChange={(e) => setTituloPersonal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && tituloPersonal.trim()) guardarPersonal();
+                  }}
+                  placeholder="Ej: consejo de profesores, dentista…"
+                  maxLength={120}
+                  autoFocus
+                  className="w-full rounded-lg border border-borde px-2 py-1.5 text-sm"
+                />
+                <p className="text-[11px] leading-snug text-tinta-tenue">
+                  Solo tú la ves en tu calendario; nadie más del colegio.
+                </p>
+                {error && (
+                  <p role="alert" className="rounded-lg border border-peligro/20 bg-peligro-suave px-2.5 py-1.5 text-xs text-peligro">
+                    {error}
+                  </p>
+                )}
+                <div className="flex items-center justify-between pt-0.5">
+                  <button type="button" onClick={() => setAbierto(false)} className="text-xs text-tinta-tenue hover:text-tinta">
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={guardarPersonal}
+                    disabled={pendiente || !tituloPersonal.trim()}
+                    className="btn btn-primario btn-sm"
+                  >
+                    {pendiente ? "Guardando…" : "Guardar"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {pestana === "evaluacion" && asignaturas.length > 0 && (
             <div className="mt-2.5 space-y-2">
               <select
                 value={asignaturaId}
@@ -193,6 +276,7 @@ export function AgendarDia({
                 </button>
               </div>
             </div>
+            )}
           </div>
         </>
       )}

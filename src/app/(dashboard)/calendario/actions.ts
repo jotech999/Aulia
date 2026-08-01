@@ -126,3 +126,40 @@ export async function eliminarEvento(id: string): Promise<Resultado> {
   revalidatePath("/calendario");
   return { ok: true };
 }
+
+// ── Notas personales: agenda privada de cada funcionario ─────────────────────
+
+const personalSchema = z.object({
+  titulo: z.string().trim().min(1, "Escribe un título.").max(120),
+  fecha: z.string().refine(esFechaISOValida, "Fecha inválida"),
+});
+
+/** Crea una nota personal del calendario. La ve SOLO su autor. */
+export async function crearEventoPersonal(input: unknown): Promise<Resultado> {
+  const parsed = personalSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const { user } = await requerirSesion();
+  await prisma.eventoPersonal.create({
+    data: {
+      colegioId: user.colegioId,
+      usuarioId: user.id,
+      titulo: parsed.data.titulo,
+      fecha: fechaDesdeISO(parsed.data.fecha),
+    },
+  });
+  revalidatePath("/calendario");
+  return { ok: true };
+}
+
+/** Elimina una nota personal PROPIA (nadie puede borrar las de otro). */
+export async function eliminarEventoPersonal(id: string): Promise<Resultado> {
+  const { user } = await requerirSesion();
+  const borradas = await prisma.eventoPersonal.deleteMany({
+    where: { id, usuarioId: user.id, colegioId: user.colegioId },
+  });
+  if (borradas.count === 0) return { ok: false, error: "Nota no encontrada." };
+  revalidatePath("/calendario");
+  return { ok: true };
+}

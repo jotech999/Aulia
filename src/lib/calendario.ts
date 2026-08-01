@@ -52,7 +52,8 @@ export type TipoEventoVista =
   | "EVALUACION"
   | "EFEMERIDE"
   | "SUSPENSION"
-  | "FERIADO";
+  | "FERIADO"
+  | "PERSONAL";
 
 /** Color y etiqueta por tipo de evento (clases Tailwind literales). */
 export const ESTILO_EVENTO: Record<TipoEventoVista, { etiqueta: string; punto: string; suave: string }> = {
@@ -62,4 +63,5 @@ export const ESTILO_EVENTO: Record<TipoEventoVista, { etiqueta: string; punto: s
   EFEMERIDE: { etiqueta: "Efeméride", punto: "bg-violet-500", suave: "bg-violet-50 text-violet-700" },
   SUSPENSION: { etiqueta: "Suspensión", punto: "bg-amber-500", suave: "bg-amber-50 text-amber-700" },
   FERIADO: { etiqueta: "Feriado", punto: "bg-emerald-500", suave: "bg-emerald-50 text-emerald-700" },
+  PERSONAL: { etiqueta: "Personal (solo tú)", punto: "bg-teal-500", suave: "bg-teal-50 text-teal-700" },
 };

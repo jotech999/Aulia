@@ -21,6 +21,7 @@ import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { NuevoEvento } from "./nuevo-evento";
 import { AgendarDia } from "./agendar-dia";
 import { BotonEliminarEvento } from "./boton-eliminar";
+import { BotonEliminarPersonal } from "./boton-eliminar-personal";
 import { nombreCurso } from "@/lib/cursos";
 
 const RE_MES = /^\d{4}-\d{2}$/;
@@ -83,7 +84,7 @@ export default async function CalendarioPage({
     : [];
 
   const rango = { gte: inicio, lte: fin };
-  const [eventos, evaluaciones, cursos, misAsignaturas, reuniones, entrevistas] = await Promise.all([
+  const [eventos, evaluaciones, cursos, misAsignaturas, reuniones, personales, entrevistas] = await Promise.all([
     prisma.eventoEscolar.findMany({
       where: {
         colegioId: user.colegioId,
@@ -149,6 +150,12 @@ export default async function CalendarioPage({
       },
       orderBy: { fecha: "asc" },
     }),
+    // Notas personales: SOLO las del usuario en sesión (agenda privada).
+    prisma.eventoPersonal.findMany({
+      where: { colegioId: user.colegioId, usuarioId: user.id, fecha: rango },
+      select: { id: true, titulo: true, fecha: true },
+      orderBy: { fecha: "asc" },
+    }),
     // Entrevistas de apoderado (solo el apoderado ve las de SUS pupilos).
     esApoderado
       ? prisma.entrevista.findMany({
@@ -188,6 +195,14 @@ export default async function CalendarioPage({
     });
   }
 
+  for (const p of personales) {
+    agregar(p.fecha.toISOString().slice(0, 10), {
+      id: null,
+      titulo: p.titulo,
+      tipo: "PERSONAL",
+      curso: null,
+    });
+  }
   for (const r of reuniones) {
     agregar(r.fecha.toISOString().slice(0, 10), {
       id: null,
@@ -319,20 +334,22 @@ export default async function CalendarioPage({
                             ? "text-tinta-suave"
                             : "text-tinta-tenue"
                       }`;
-                      return puedeEvaluar && misAsignaturas.length > 0 ? (
+                      return (
                         <AgendarDia
                           iso={celda.iso}
                           dia={celda.dia}
                           claseDia={claseDia}
                           columna={semana.indexOf(celda)}
                           haciaArriba={i >= semanas.length - 2}
-                          asignaturas={misAsignaturas.map((a) => ({
-                            id: a.id,
-                            nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
-                          }))}
+                          asignaturas={
+                            puedeEvaluar
+                              ? misAsignaturas.map((a) => ({
+                                  id: a.id,
+                                  nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
+                                }))
+                              : []
+                          }
                         />
-                      ) : (
-                        <div className={claseDia}>{celda.dia}</div>
                       );
                     })()}
                     <div className="space-y-1">
@@ -388,6 +405,28 @@ export default async function CalendarioPage({
                   </span>
                 </span>
                 {puedeGestionar && <BotonEliminarEvento id={e.id} titulo={e.titulo} />}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {personales.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 font-display text-sm font-semibold uppercase tracking-wide text-tinta-tenue">
+            Mis notas personales (solo tú las ves)
+          </h2>
+          <ul className="overflow-hidden rounded-xl border border-borde bg-superficie shadow-suave">
+            {personales.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-3 border-b border-borde px-4 py-2.5 last:border-0">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-teal-500" aria-hidden />
+                  <span className="truncate text-sm font-medium text-tinta">{p.titulo}</span>
+                  <span className="shrink-0 text-xs text-tinta-tenue">
+                    {p.fecha.toISOString().slice(8, 10)}/{p.fecha.toISOString().slice(5, 7)}
+                  </span>
+                </span>
+                <BotonEliminarPersonal id={p.id} titulo={p.titulo} />
               </li>
             ))}
           </ul>

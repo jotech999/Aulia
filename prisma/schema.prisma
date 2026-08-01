@@ -1798,6 +1798,21 @@ model MaterialDocente {
   @@index([colegioId, creadoEn])
 }
 
+/// Nota personal del calendario: la ve SOLO su autor (pedido docente:
+/// "que pueda agregar cosas personales y que los pueda ver solo ella").
+/// No lleva datos de estudiantes; es la agenda privada del funcionario.
+model EventoPersonal {
+  id        String   @id @default(cuid())
+  colegioId String
+  usuarioId String
+  fecha     DateTime @db.Date
+  titulo    String
+  creadoEn  DateTime @default(now())
+
+  @@index([usuarioId, fecha])
+  @@index([colegioId])
+}
+
 /// Rate limit compartido entre instancias. La clave es un hash irreversible
 /// del identificador; nunca se persiste el email/IP en claro.
 model LimiteAutenticacion {

@@ -23,16 +23,20 @@ export function AgendarDia({
   iso,
   dia,
   claseDia,
+  claseCelda,
   asignaturas,
   columna,
   haciaArriba,
+  children,
 }: {
   iso: string; // YYYY-MM-DD del día tocado
   dia: number; // número que se muestra
-  claseDia: string; // clases del circulito (mismas del server)
+  claseDia: string; // clases del circulito del número (mismas del server)
+  claseCelda: string; // clases de la CELDA completa (hoy, fuera de mes, etc.)
   asignaturas: { id: string; nombre: string }[];
   columna: number; // 0=lunes … 6=domingo (para alinear el popover)
   haciaArriba: boolean; // últimas semanas: abrir hacia arriba
+  children?: React.ReactNode; // los eventos del día (server-rendered)
 }) {
   const [abierto, setAbierto] = useState(false);
   const [pestana, setPestana] = useState<"evaluacion" | "personal">(
@@ -114,16 +118,22 @@ export function AgendarDia({
   }).format(new Date(`${iso}T00:00:00Z`));
 
   return (
-    <span className="relative block w-fit">
-      <button
-        type="button"
-        onClick={abrir}
-        aria-expanded={abierto}
-        title="Agendar evaluación este día"
-        className={`${claseDia} cursor-pointer transition-colors hover:ring-2 hover:ring-marca-300`}
-      >
-        {dia}
-      </button>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={abrir}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
+          e.preventDefault();
+          abrir();
+        }
+      }}
+      aria-expanded={abierto}
+      title="Tocar para agendar en este día"
+      className={`${claseCelda} relative cursor-pointer`}
+    >
+      <span className={claseDia}>{dia}</span>
+      {children}
 
       {abierto && (
         <>
@@ -131,16 +141,20 @@ export function AgendarDia({
           <button
             type="button"
             aria-label="Cerrar"
-            onClick={() => setAbierto(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setAbierto(false);
+            }}
             className="fixed inset-0 z-30 cursor-default"
             tabIndex={-1}
           />
           <div
             role="dialog"
-            aria-label={`Agendar evaluación el ${fechaLegible}`}
-            className={`absolute z-40 w-64 rounded-xl border border-borde bg-superficie p-3 shadow-flotante ${
-              columna >= 4 ? "right-0" : "left-0"
-            } ${haciaArriba ? "bottom-full mb-1.5" : "top-full mt-1.5"}`}
+            aria-label={`Agendar el ${fechaLegible}`}
+            onClick={(e) => e.stopPropagation()}
+            className={`absolute z-40 w-64 cursor-default rounded-xl border border-borde bg-superficie p-3 text-left shadow-flotante ${
+              columna >= 4 ? "right-1" : "left-1"
+            } ${haciaArriba ? "bottom-full mb-1.5" : "top-8"}`}
           >
             <p className="text-sm font-bold capitalize text-tinta">{fechaLegible}</p>
 
@@ -280,6 +294,6 @@ export function AgendarDia({
           </div>
         </>
       )}
-    </span>
+    </div>
   );
 }

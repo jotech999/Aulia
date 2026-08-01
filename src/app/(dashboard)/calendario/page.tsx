@@ -315,43 +315,38 @@ export default async function CalendarioPage({
               {semana.map((celda) => {
                 const esHoy = celda.iso === hoy;
                 const items = porDia.get(celda.iso) ?? [];
+                const claseCelda = `min-h-24 border-b border-r border-borde p-1.5 transition-colors last:border-r-0 hover:bg-marca-50/40 ${
+                  esHoy
+                    ? "bg-marca-50/60 ring-1 ring-inset ring-marca-200"
+                    : celda.delMes
+                      ? ""
+                      : "bg-superficie-2/50"
+                }`;
+                const claseDia = `mb-1 flex h-5 w-5 items-center justify-center rounded-full text-xs tabular-nums ${
+                  esHoy
+                    ? "bg-marca-600 font-bold text-white"
+                    : celda.delMes
+                      ? "text-tinta-suave"
+                      : "text-tinta-tenue"
+                }`;
                 return (
-                  <div
+                  <AgendarDia
                     key={celda.iso}
-                    className={`min-h-24 border-b border-r border-borde p-1.5 transition-colors last:border-r-0 hover:bg-marca-50/40 ${
-                      esHoy
-                        ? "bg-marca-50/60 ring-1 ring-inset ring-marca-200"
-                        : celda.delMes
-                          ? ""
-                          : "bg-superficie-2/50"
-                    }`}
+                    iso={celda.iso}
+                    dia={celda.dia}
+                    claseDia={claseDia}
+                    claseCelda={claseCelda}
+                    columna={semana.indexOf(celda)}
+                    haciaArriba={i >= semanas.length - 2}
+                    asignaturas={
+                      puedeEvaluar
+                        ? misAsignaturas.map((a) => ({
+                            id: a.id,
+                            nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
+                          }))
+                        : []
+                    }
                   >
-                    {(() => {
-                      const claseDia = `mb-1 flex h-5 w-5 items-center justify-center rounded-full text-xs tabular-nums ${
-                        esHoy
-                          ? "bg-marca-600 font-bold text-white"
-                          : celda.delMes
-                            ? "text-tinta-suave"
-                            : "text-tinta-tenue"
-                      }`;
-                      return (
-                        <AgendarDia
-                          iso={celda.iso}
-                          dia={celda.dia}
-                          claseDia={claseDia}
-                          columna={semana.indexOf(celda)}
-                          haciaArriba={i >= semanas.length - 2}
-                          asignaturas={
-                            puedeEvaluar
-                              ? misAsignaturas.map((a) => ({
-                                  id: a.id,
-                                  nombre: `${a.nombre} · ${nombreCurso(a.curso)}`,
-                                }))
-                              : []
-                          }
-                        />
-                      );
-                    })()}
                     <div className="space-y-1">
                       {items.slice(0, 3).map((ev, j) => (
                         <div
@@ -369,7 +364,7 @@ export default async function CalendarioPage({
                         <div className="px-1 text-[11px] text-tinta-tenue">+{items.length - 3} más</div>
                       )}
                     </div>
-                  </div>
+                  </AgendarDia>
                 );
               })}
             </div>

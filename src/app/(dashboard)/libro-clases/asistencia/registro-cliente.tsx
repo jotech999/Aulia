@@ -579,7 +579,7 @@ export function RegistroAsistencia({
 
       {/* Barra de guardado (fija en móvil) */}
       <div
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-borde bg-superficie/95 px-4 py-3 backdrop-blur md:static md:mt-6 md:rounded-2xl md:border"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-borde bg-superficie/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:static md:mt-6 md:rounded-2xl md:border md:pb-3"
         role="status"
         aria-live="polite"
       >

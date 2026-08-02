@@ -135,7 +135,7 @@ export function Asistente({
         onClick={() => setAbierto((v) => !v)}
         aria-label="Abrir a Auli, el asistente de Aulia"
         aria-expanded={abierto}
-        className="encabezado-cine fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full py-2.5 pl-2.5 pr-4 text-sm font-semibold text-white shadow-flotante transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-marca-300"
+        className="encabezado-cine fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-2 rounded-full py-2.5 pl-2.5 pr-4 text-sm font-semibold text-white shadow-flotante transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-marca-300 md:bottom-5 md:right-5"
       >
         <Auli className="h-9 w-9 drop-shadow-sm" />
         <span className="hidden sm:inline">Auli</span>
@@ -152,7 +152,7 @@ export function Asistente({
           <aside
             role="dialog"
             aria-label="Auli, el asistente de Aulia"
-            className="animar-surgir fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col rounded-t-2xl border border-borde bg-superficie shadow-flotante md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:rounded-none md:rounded-l-2xl"
+            className="fixed inset-x-0 bottom-0 z-50 flex h-[85vh] animate-[aparecer_0.2s_ease-out_both] flex-col rounded-t-2xl border border-borde bg-superficie pb-[env(safe-area-inset-bottom)] shadow-flotante md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:rounded-none md:rounded-l-2xl md:pb-0"
           >
             {/* Encabezado */}
             <header className="encabezado-cine flex items-center justify-between rounded-t-2xl px-5 py-4 md:rounded-none md:rounded-tl-2xl">

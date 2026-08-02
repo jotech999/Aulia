@@ -404,6 +404,8 @@ model Estudiante {
   asistenciasBloque   AsistenciaBloque[]
   asistentesReunion   AsistenteReunionApoderados[]
 
+  resolucionesPromocion ResolucionPromocion[]
+
   @@unique([colegioId, rut])
   @@unique([colegioId, id])
   @@index([colegioId])
@@ -1824,4 +1826,37 @@ model LimiteAutenticacion {
   actualizadoEn   DateTime  @updatedAt
 
   @@index([bloqueadoHasta])
+}
+
+/// Estado de promoción de un estudiante al cierre del año (Decreto 67, art. 10).
+enum EstadoPromocion {
+  PROMOVIDO
+  REPITE
+  ANALISIS
+}
+
+/// RESOLUCIÓN DE PROMOCIÓN (Decreto 67, art. 11): el sistema PROPONE un estado
+/// a partir de notas y asistencia, pero la decisión final la firma dirección y
+/// queda fundada por escrito. Un registro por estudiante y año escolar.
+model ResolucionPromocion {
+  id            String          @id @default(cuid())
+  colegioId     String
+  anioEscolarId String
+  estudianteId  String
+  estado        EstadoPromocion
+  /// Fundamento de la decisión (obligatorio: art. 11 exige resolución fundada).
+  fundamento    String
+  /// Estado que el sistema había propuesto, para trazabilidad de la diferencia.
+  estadoPropuesto EstadoPromocion
+  /// Promedio general y asistencia congelados al momento de resolver.
+  promedioGeneral Float?
+  asistencia      Int?
+  resueltoPorId String
+  resueltoEn    DateTime        @default(now())
+  actualizadoEn DateTime        @updatedAt
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@unique([anioEscolarId, estudianteId])
+  @@index([colegioId, anioEscolarId])
 }

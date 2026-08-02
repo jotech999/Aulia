@@ -98,6 +98,7 @@ const GRUPOS_BASE: Grupo[] = [
       { href: "/admin/finanzas", etiqueta: "Finanzas", icono: "calificaciones", roles: ["ADMIN", "DIRECTOR"] },
       { href: "/admin/asistencia-hoy", etiqueta: "Asistencia de hoy", icono: "asistencia", roles: ["ADMIN", "DIRECTOR", "UTP", "INSPECTOR"] },
       { href: "/admin/cierre-mensual", etiqueta: "Cierre mensual", icono: "asistencia", roles: ["ADMIN", "DIRECTOR", "UTP"] },
+      { href: "/cierre-anual", etiqueta: "Cierre de año", icono: "calificaciones", roles: ["ADMIN", "DIRECTOR", "UTP"] },
       { href: "/admin/exportaciones", etiqueta: "Exportaciones", icono: "calificaciones", roles: ["ADMIN", "DIRECTOR", "UTP"] },
       { href: "/admin/onboarding", etiqueta: "Puesta en marcha", icono: "cursos", roles: ["ADMIN", "DIRECTOR"] },
       { href: "/admin/cumplimiento", etiqueta: "Cumplimiento", icono: "escudo", roles: ["ADMIN", "DIRECTOR", "UTP"] },

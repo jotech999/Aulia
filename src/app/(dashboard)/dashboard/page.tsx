@@ -513,20 +513,20 @@ async function PanelPie({
         ].map((ind, i) => {
           const Icono = ind.icono;
           return (
-            <div key={ind.titulo} className={`superficie flex flex-col rounded-xl p-5 ${i === 0 ? "acento-superior" : ""}`}>
+            <div key={ind.titulo} className={`superficie flex flex-col rounded-xl p-4 sm:p-5 ${i === 0 ? "acento-superior" : ""}`}>
               <div className="flex items-start justify-between">
                 <p className="text-sm font-medium text-tinta-suave">{ind.titulo}</p>
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-marca-50 text-marca-600">
                   <Icono className="h-[18px] w-[18px]" />
                 </span>
               </div>
-              <p className="mt-3 font-display text-4xl font-bold tabular-nums leading-none">{ind.valor}</p>
+              <p className="mt-3 font-display text-3xl font-bold tabular-nums leading-none sm:text-4xl">{ind.valor}</p>
             </div>
           );
         })}
         <Link
           href="/pie"
-          className="superficie tarjeta-int flex flex-col justify-center rounded-xl p-5"
+          className="superficie tarjeta-int flex flex-col justify-center rounded-xl p-4 sm:p-5"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-marca-50 text-marca-600">
             <Iconos.candado className="h-[18px] w-[18px]" />

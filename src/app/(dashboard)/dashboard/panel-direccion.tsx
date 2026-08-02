@@ -360,7 +360,7 @@ export async function PanelDireccion({
             <LineaArea datos={tendencia} sufijo="%" etiqueta="Asistencia mensual del colegio" />
           ) : mesesConDatos === 1 ? (
             <div className="flex flex-col items-center justify-center gap-1 py-12">
-              <p className="font-display text-4xl font-bold tabular-nums text-tinta">
+              <p className="font-display text-3xl font-bold tabular-nums text-tinta sm:text-4xl">
                 {resumenHoyPct === null ? "—" : `${resumenHoyPct}%`}
               </p>
               <p className="text-sm text-tinta-suave">Asistencia de este mes</p>

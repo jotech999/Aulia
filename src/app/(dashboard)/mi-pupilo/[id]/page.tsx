@@ -211,7 +211,7 @@ export default async function MiPupiloPage({
         ← Volver
       </Link>
       {/* Héroe cinematográfico: el estudiante como protagonista */}
-      <header className="encabezado-cine malla-academica estrellas relative mt-2 mb-5 overflow-hidden rounded-2xl px-6 py-6 shadow-elevada sm:px-8">
+      <header className="encabezado-cine malla-academica estrellas relative mt-2 mb-5 overflow-hidden rounded-2xl px-5 py-5 shadow-elevada sm:px-8 sm:py-6">
         <span className="aurora-luz aurora-luz-1" aria-hidden />
         <span className="aurora-luz aurora-luz-2" aria-hidden />
         <span
@@ -244,7 +244,7 @@ export default async function MiPupiloPage({
         </div>
         <div className="superficie tarjeta-heroe flex flex-col justify-center rounded-xl p-5 sm:col-span-2">
           <p className="text-xs font-bold uppercase tracking-widest text-marca-600">Promedio general</p>
-          <p className={`mt-1 font-display text-4xl font-bold tabular-nums ${general !== null ? colorNota(general) : "text-tinta"}`}>
+          <p className={`mt-1 font-display text-3xl font-bold tabular-nums sm:text-4xl ${general !== null ? colorNota(general) : "text-tinta"}`}>
             {general !== null ? general.toFixed(1) : "—"}
           </p>
           <p className="mt-1 text-xs text-tinta-tenue">

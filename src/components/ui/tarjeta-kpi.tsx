@@ -49,7 +49,7 @@ export function TarjetaKPI({
   const Icono = icono ? Iconos[icono] : null;
   const base = [
     "superficie superficie-realce flex flex-col rounded-xl transition-all duration-300",
-    destacado ? "tarjeta-heroe p-5 sm:p-6" : "p-5",
+    destacado ? "tarjeta-heroe p-4 sm:p-6" : "p-4 sm:p-5",
     href ? "tarjeta-int hover:-translate-y-0.5" : "hover:-translate-y-0.5 hover:shadow-elevada",
     className ?? "",
   ]
@@ -58,20 +58,22 @@ export function TarjetaKPI({
 
   const cuerpo = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-tinta-suave">{titulo}</p>
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <p className="text-[13px] font-medium leading-snug text-tinta-suave sm:text-sm">{titulo}</p>
         {Icono && (
           <span
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${TONO_ICONO[tono]}`}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 ${TONO_ICONO[tono]}`}
             aria-hidden
           >
-            <Icono className="h-[18px] w-[18px]" />
+            <Icono className="h-[17px] w-[17px] sm:h-[18px] sm:w-[18px]" />
           </span>
         )}
       </div>
 
+      {/* En móvil la cifra baja de tamaño: a pantalla completa cada tarjeta
+          ocupaba media pantalla y había que hacer scroll para ver cuatro datos. */}
       <p
-        className={`cifra mt-3 ${destacado ? "text-[2.6rem] tracking-tight sm:text-5xl" : "text-3xl"} ${
+        className={`cifra mt-2 sm:mt-3 ${destacado ? "text-[2rem] tracking-tight sm:text-5xl" : "text-2xl sm:text-3xl"} ${
           valorPeligro ? "text-peligro" : destacado ? "texto-degradado" : "text-tinta"
         }`}
       >

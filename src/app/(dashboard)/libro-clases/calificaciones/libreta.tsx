@@ -586,7 +586,7 @@ export function Libreta({
                   */}
                   <td
                     title={est.nombre}
-                    className={`sticky left-0 z-10 min-w-[15rem] max-w-[20rem] bg-superficie px-3 ${filaY} font-medium leading-snug text-tinta`}
+                    className={`sticky left-0 z-10 min-w-[9.5rem] max-w-[13rem] bg-superficie px-3 sm:min-w-[15rem] sm:max-w-[20rem] ${filaY} text-[13px] font-medium leading-snug text-tinta sm:text-sm`}
                   >
                     {est.nombre}
                   </td>

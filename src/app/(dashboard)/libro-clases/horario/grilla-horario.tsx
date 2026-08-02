@@ -55,7 +55,15 @@ export function GrillaHorario({
 }) {
   const [ahora, setAhora] = useState(ahoraSantiago);
   const [pop, setPop] = useState<Pop>(null);
+  // En el celular la semana completa obliga a desplazarse de lado para ver
+  // media grilla: se abre en "Hoy", que es la agenda vertical del día. En
+  // pantalla grande sigue partiendo en la semana.
   const [vista, setVista] = useState<"semana" | "hoy">("semana");
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
+      setVista("hoy");
+    }
+  }, []);
   const marcoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

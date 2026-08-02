@@ -94,7 +94,7 @@ export function FilaCierre({
   return (
     <>
       <tr className="border-b border-borde last:border-0">
-        <td className="sticky left-0 z-10 min-w-[14rem] bg-superficie px-3 py-2 font-medium leading-snug text-tinta">
+        <td className="sticky left-0 z-10 min-w-[9.5rem] max-w-[13rem] bg-superficie px-3 py-2 text-[13px] font-medium leading-snug text-tinta sm:min-w-[14rem] sm:text-sm">
           {fila.nombre}
         </td>
         {fila.promedios.map((p) => (

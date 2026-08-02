@@ -286,7 +286,7 @@ export async function PanelProfesor({
 
   return (
     <div className="animar-surgir">
-      <header className="encabezado-cine malla-academica estrellas relative overflow-hidden rounded-2xl px-6 py-7 shadow-elevada sm:px-9 sm:py-9">
+      <header className="encabezado-cine malla-academica estrellas relative overflow-hidden rounded-2xl px-5 py-6 shadow-elevada sm:px-9 sm:py-9">
         <span className="aurora-luz aurora-luz-1" aria-hidden />
         <span className="aurora-luz aurora-luz-2" aria-hidden />
         <span
@@ -298,14 +298,19 @@ export async function PanelProfesor({
             <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
               Año escolar {anio} · {semestre}
             </p>
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="mt-1.5 font-display text-[1.7rem] font-bold leading-tight tracking-tight text-white sm:mt-2 sm:text-4xl">
               Hola, {nombre?.split(" ")[0] ?? ""}
             </h1>
             <p className="mt-1.5 text-sm text-white/75">
               Tus cursos y pendientes de hoy · {colegioNombre}
             </p>
+            {/* En móvil el chip lateral de fecha se oculta: la fecha va aquí,
+                en una línea, en vez de robar media pantalla. */}
+            <p className="mt-2 text-xs font-medium capitalize text-white/60 sm:hidden">
+              {formatearFechaLarga(hoy)}
+            </p>
           </div>
-          <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-right backdrop-blur-sm">
+          <div className="hidden rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-right backdrop-blur-sm sm:block">
             <p className="text-[11px] uppercase tracking-wider text-white/60">Hoy</p>
             <p className="mt-0.5 text-sm font-semibold capitalize text-white">
               {formatearFechaLarga(hoy)}

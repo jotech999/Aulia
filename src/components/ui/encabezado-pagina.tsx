@@ -21,7 +21,7 @@ export function EncabezadoPagina({
 }) {
   const Icono = icono ? Iconos[icono] : null;
   return (
-    <div className="mb-6">
+    <div className="mb-5 sm:mb-6">
       {volver && (
         <Link
           href={volver.href}
@@ -34,18 +34,18 @@ export function EncabezadoPagina({
         <div className={`flex items-start gap-3 ${volver ? "mt-1.5" : ""}`}>
           {Icono && (
             <span
-              className="icono-gradiente flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-suave"
+              className="icono-gradiente flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-suave sm:h-11 sm:w-11"
               aria-hidden
             >
-              <Icono className="h-[22px] w-[22px]" />
+              <Icono className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
             </span>
           )}
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-tinta sm:text-[1.7rem]">
+            <h1 className="font-display text-xl font-bold leading-tight tracking-tight text-tinta sm:text-[1.7rem]">
               {titulo}
             </h1>
             <span
-              className="mt-1.5 block h-1 w-10 rounded-full bg-gradient-to-r from-marca-500 to-acento"
+              className="mt-1.5 block h-1 w-9 rounded-full bg-gradient-to-r from-marca-500 to-acento sm:w-10"
               aria-hidden
             />
             {descripcion && (
@@ -53,7 +53,7 @@ export function EncabezadoPagina({
             )}
           </div>
         </div>
-        {acciones && <div className="flex items-center gap-2">{acciones}</div>}
+        {acciones && <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{acciones}</div>}
       </div>
     </div>
   );

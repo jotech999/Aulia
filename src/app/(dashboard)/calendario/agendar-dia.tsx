@@ -191,9 +191,15 @@ export function AgendarDia({
             role="dialog"
             aria-label={`Agendar el ${fechaLegible}`}
             onClick={(e) => e.stopPropagation()}
-            className={`absolute z-40 w-64 cursor-default rounded-xl border border-borde bg-superficie p-3 text-left shadow-flotante ${
-              columna >= 4 ? "right-1" : "left-1"
-            } ${haciaArriba ? "bottom-full mb-1.5" : "top-8"}`}
+            /*
+              En el celular es una hoja inferior a ancho completo: anclado a una
+              celda de ~50px, el globo de 256px se salía de la pantalla y los
+              campos quedaban imposibles de tocar. Desde sm vuelve a anclarse al
+              día, que es donde el gesto tiene sentido con mouse.
+            */
+            className={`fixed inset-x-3 bottom-3 z-40 max-h-[82vh] cursor-default overflow-y-auto rounded-xl border border-borde bg-superficie p-3 text-left shadow-flotante sm:absolute sm:inset-x-auto sm:bottom-auto sm:max-h-none sm:w-64 sm:overflow-visible ${
+              columna >= 4 ? "sm:right-1" : "sm:left-1"
+            } ${haciaArriba ? "sm:bottom-full sm:mb-1.5" : "sm:top-8"}`}
           >
             <p className="text-sm font-bold capitalize text-tinta">{fechaLegible}</p>
 

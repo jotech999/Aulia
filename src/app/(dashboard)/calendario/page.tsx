@@ -339,11 +339,12 @@ export default async function CalendarioPage({
 
       {/* Grilla mensual */}
       <div className="overflow-x-auto rounded-xl border border-borde bg-superficie shadow-suave">
-        <div className="min-w-[720px]">
+        <div className="sm:min-w-[720px]">
           <div className="grid grid-cols-7 border-b border-borde">
             {NOMBRE_DIA_CORTO.map((d) => (
-              <div key={d} className="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-tinta-tenue">
-                {d}
+              <div key={d} className="px-1 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-tinta-tenue sm:px-2 sm:text-xs">
+                <span className="sm:hidden">{d.slice(0, 1)}</span>
+                <span className="hidden sm:inline">{d}</span>
               </div>
             ))}
           </div>
@@ -352,7 +353,7 @@ export default async function CalendarioPage({
               {semana.map((celda) => {
                 const esHoy = celda.iso === hoy;
                 const items = porDia.get(celda.iso) ?? [];
-                const claseCelda = `min-h-24 border-b border-r border-borde p-1.5 transition-colors last:border-r-0 hover:bg-marca-50/40 ${
+                const claseCelda = `min-h-16 border-b border-r border-borde p-1 sm:min-h-24 sm:p-1.5 transition-colors last:border-r-0 hover:bg-marca-50/40 ${
                   esHoy
                     ? "bg-marca-50/60 ring-1 ring-inset ring-marca-200"
                     : celda.delMes
@@ -385,23 +386,45 @@ export default async function CalendarioPage({
                         : []
                     }
                   >
-                    <div className="space-y-1">
-                      {items.slice(0, 3).map((ev, j) => (
-                        <div
-                          key={j}
-                          title={`${ESTILO_EVENTO[ev.tipo].etiqueta}: ${ev.titulo}${ev.curso ? ` (${ev.curso})` : ""}${ev.detalle ? `. Contenido: ${ev.detalle}` : ""}`}
-                          className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] leading-tight transition-all duration-150 hover:-translate-y-px hover:shadow-sm ${ESTILO_EVENTO[ev.tipo].suave}`}
-                        >
-                          {ev.colorPunto && (
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${ev.colorPunto}`} aria-hidden />
+                    <>
+                      {/* Móvil: puntos de color (el detalle se abre al tocar el día) */}
+                      {items.length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
+                          {items.slice(0, 4).map((ev, j) => (
+                            <span
+                              key={j}
+                              className={`h-1.5 w-1.5 rounded-full ${ev.colorPunto ?? ESTILO_EVENTO[ev.tipo].punto}`}
+                            />
+                          ))}
+                          {items.length > 4 && (
+                            <span className="text-[9px] leading-none text-tinta-tenue">+</span>
                           )}
-                          <span className="truncate">{ev.titulo}</span>
                         </div>
-                      ))}
-                      {items.length > 3 && (
-                        <div className="px-1 text-[11px] text-tinta-tenue">+{items.length - 3} más</div>
                       )}
-                    </div>
+                      {/* Lector de pantalla: el resumen del día sigue disponible */}
+                      <span className="sr-only sm:hidden">
+                        {items.length === 0
+                          ? "Sin eventos"
+                          : `${items.length} evento(s): ${items.map((e) => e.titulo).join(", ")}`}
+                      </span>
+                      <div className="hidden space-y-1 sm:block">
+                        {items.slice(0, 3).map((ev, j) => (
+                          <div
+                            key={j}
+                            title={`${ESTILO_EVENTO[ev.tipo].etiqueta}: ${ev.titulo}${ev.curso ? ` (${ev.curso})` : ""}${ev.detalle ? `. Contenido: ${ev.detalle}` : ""}`}
+                            className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] leading-tight transition-all duration-150 hover:-translate-y-px hover:shadow-sm ${ESTILO_EVENTO[ev.tipo].suave}`}
+                          >
+                            {ev.colorPunto && (
+                              <span className={`h-2 w-2 shrink-0 rounded-full ${ev.colorPunto}`} aria-hidden />
+                            )}
+                            <span className="truncate">{ev.titulo}</span>
+                          </div>
+                        ))}
+                        {items.length > 3 && (
+                          <div className="px-1 text-[11px] text-tinta-tenue">+{items.length - 3} más</div>
+                        )}
+                      </div>
+                    </>
                   </AgendarDia>
                 );
               })}

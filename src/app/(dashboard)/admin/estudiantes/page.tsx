@@ -95,8 +95,8 @@ export default async function EstudiantesPage({
           accion={hayFiltro ? undefined : { href: "/admin/importar", etiqueta: "Importar estudiantes" }}
         />
       ) : (
-        <div className="superficie overflow-hidden rounded-xl">
-          <table className="w-full text-left text-sm">
+        <div className="superficie overflow-x-auto rounded-xl">
+          <table className="w-full min-w-[44rem] text-left text-sm">
             <thead className="border-b border-borde bg-superficie-2 text-xs uppercase tracking-wide text-tinta-tenue">
               <tr>
                 <th className="px-4 py-2.5 font-semibold">Estudiante</th>

@@ -254,7 +254,7 @@ export default async function AlertasPage({
       {filas.length > 0 && (
         <>
           {/* KPIs de resumen del curso */}
-          <div className="mb-4 grid grid-cols-3 gap-3">
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-peligro/20 bg-peligro-suave p-4 text-center">
               <p className="cifra text-2xl text-peligro">{conteoRiesgo.ALTO}</p>
               <p className="mt-0.5 text-xs font-medium text-peligro">Riesgo alto</p>

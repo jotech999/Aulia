@@ -53,7 +53,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       />
 
       {/* Resumen de cobertura */}
-      <div className="mb-5 grid grid-cols-3 gap-3">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-borde bg-superficie p-4 text-center">
           <p className="cifra text-2xl text-tinta">{totalEst}</p>
           <p className="mt-0.5 text-xs text-tinta-tenue">Estudiantes</p>
@@ -86,8 +86,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           No hay cursos.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-borde bg-superficie">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-xl border border-borde bg-superficie">
+          <table className="w-full min-w-[40rem] text-left text-sm">
             <thead className="border-b border-borde bg-superficie-2 text-xs uppercase tracking-wide text-tinta-tenue">
               <tr>
                 <th className="px-4 py-2.5 font-semibold">Estudiante</th>

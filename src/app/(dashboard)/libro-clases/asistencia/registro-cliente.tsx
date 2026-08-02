@@ -367,7 +367,12 @@ export function RegistroAsistencia({
   return (
     <div className="mx-auto max-w-2xl pb-28 md:pb-8">
       {/* Resumen sticky en vivo: conteos + % + barra de distribución */}
-      <div className="acento-superior sticky top-0 z-10 mt-4 rounded-2xl border border-borde bg-superficie/95 px-4 py-3 text-sm shadow-elevada backdrop-blur">
+      {/*
+        Se ancla DEBAJO de la barra superior: con top-0 quedaba pisado por la
+        barra al desplazarse (en el celular el resumen desaparecía tras el
+        logo justo cuando más se necesita, al ir marcando la lista).
+      */}
+      <div className="acento-superior sticky top-[3.25rem] z-[9] mt-4 rounded-2xl border border-borde bg-superficie/95 px-4 py-3 text-sm shadow-elevada backdrop-blur md:top-[3.5rem]">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {conteos.map(({ estado, n }) => (
             <span key={estado} className={`inline-flex items-center gap-1.5 font-semibold ${ESTADOS_UI[estado].texto}`}>
@@ -547,7 +552,7 @@ export function RegistroAsistencia({
               </div>
 
               {menuAbierto === e.id && (
-                <div className="mt-1 grid grid-cols-4 gap-2 rounded-xl border border-borde bg-superficie p-2 shadow-suave">
+                <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl border border-borde bg-superficie p-2 shadow-suave sm:grid-cols-4">
                   {ORDEN_CICLO.map((k) => {
                     const s = ESTADOS_UI[k];
                     return (

@@ -196,11 +196,13 @@ export default async function DashboardLayout({
             <div className="flex min-w-0 items-center gap-1">
               <MenuMovil rol={rol} colegioNombre={sesion.user.colegioNombre} badges={badgesNav} />
               <Isotipo className="h-8 w-8 shrink-0" />
-              <p className="font-display font-bold tracking-tight">Aulia</p>
+              {/* En teléfonos angostos (≤360px) el logotipo escrito hacía que los
+                  botones de la derecha se apretaran o saltaran de línea. */}
+              <p className="hidden font-display font-bold tracking-tight xs:block">Aulia</p>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-0.5">
               {muestraHoy && <BotonHoy />}
-                <Campana items={itemsNotif} noLeidas={noLeidas} />
+              <Campana items={itemsNotif} noLeidas={noLeidas} />
               <BotonPaleta compacto />
               <form action={cerrarSesion}>
                 <BotonCerrarSesion compacto />

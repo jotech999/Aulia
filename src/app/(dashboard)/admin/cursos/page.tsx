@@ -34,8 +34,8 @@ export default async function CursosPage() {
           accion={{ href: "/admin/importar", etiqueta: "Importar cursos" }}
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-borde bg-superficie shadow-suave">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-xl border border-borde bg-superficie shadow-suave">
+          <table className="w-full min-w-[38rem] text-left text-sm">
             <thead className="border-b border-borde bg-superficie-2 text-xs uppercase tracking-wide text-tinta-tenue">
               <tr>
                 <th className="px-4 py-3">Curso</th>

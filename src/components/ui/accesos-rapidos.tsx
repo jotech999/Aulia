@@ -54,7 +54,12 @@ export function AccesosRapidos({ rol }: { rol: string }) {
 
   return (
     <nav aria-label="Accesos rápidos" className="surgir-secuencia mt-5">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      {/*
+        En móvil son una tira que se desliza: en rejilla ocupaban casi una
+        pantalla completa antes de llegar al contenido real. Desde sm vuelven a
+        ser rejilla, donde sí hay espacio de sobra.
+      */}
+      <div className="tira-movil -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-6">
         {accesos.map((a) => {
           const Icono = Iconos[a.icono];
           return (
@@ -62,14 +67,18 @@ export function AccesosRapidos({ rol }: { rol: string }) {
               key={a.href + a.etiqueta}
               href={a.href}
               prefetch
-              className="superficie tarjeta-int tarjeta-lumen group flex flex-col gap-2.5 rounded-xl border border-borde p-3.5 shadow-suave transition-all duration-300 hover:-translate-y-1"
+              className="superficie tarjeta-int tarjeta-lumen group flex w-32 shrink-0 snap-start flex-col gap-2 rounded-xl border border-borde p-3 shadow-suave transition-all duration-300 hover:-translate-y-1 sm:w-auto sm:shrink sm:gap-2.5 sm:p-3.5"
             >
-              <span className="icono-gradiente flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-suave transition-transform duration-300 group-hover:scale-110">
-                <Icono className="h-[18px] w-[18px]" />
+              <span className="icono-gradiente flex h-8 w-8 items-center justify-center rounded-lg text-white shadow-suave transition-transform duration-300 group-hover:scale-110 sm:h-9 sm:w-9">
+                <Icono className="h-[17px] w-[17px] sm:h-[18px] sm:w-[18px]" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-tinta transition-colors group-hover:text-marca-700">{a.etiqueta}</span>
-                <span className="block truncate text-[11px] leading-snug text-tinta-tenue">{a.descripcion}</span>
+                <span className="block truncate text-[13px] font-semibold leading-tight text-tinta transition-colors group-hover:text-marca-700 sm:text-sm">
+                  {a.etiqueta}
+                </span>
+                <span className="block truncate text-[11px] leading-snug text-tinta-tenue">
+                  {a.descripcion}
+                </span>
               </span>
             </Link>
           );

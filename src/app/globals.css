@@ -13,6 +13,10 @@
    ========================================================================== */
 
 @theme {
+  /* Punto de quiebre extra para teléfonos angostos (iPhone SE, Android chicos):
+     bajo 380px hay que soltar elementos accesorios de la barra superior. */
+  --breakpoint-xs: 380px;
+
   /* Tipografía: Plus Jakarta Sans para display, Inter para body.
      Inter se mantiene en el cuerpo porque sus cifras son de ancho tabular:
      es lo que hace que la libreta de notas y las tablas de asistencia

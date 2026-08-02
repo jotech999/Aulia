@@ -61,8 +61,8 @@ export default async function CierreMensualPage({
       </section>
 
       {/* Tabla por curso */}
-      <div className="superficie mt-6 overflow-hidden rounded-xl">
-        <table className="w-full text-left text-sm">
+      <div className="superficie mt-6 overflow-x-auto rounded-xl">
+        <table className="w-full min-w-[40rem] text-left text-sm">
           <thead className="border-b border-borde bg-superficie-2 text-xs uppercase tracking-wide text-tinta-tenue">
             <tr>
               <th className="px-4 py-2.5 font-semibold">Curso</th>

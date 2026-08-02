@@ -168,8 +168,8 @@ export default async function MorosidadPage({
           </p>
         </div>
       ) : (
-        <div className="mt-4 overflow-hidden rounded-xl border border-borde bg-superficie shadow-suave">
-          <table className="w-full text-left text-sm">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-borde bg-superficie shadow-suave">
+          <table className="w-full min-w-[42rem] text-left text-sm">
             <thead className="border-b border-borde bg-superficie-2 text-xs uppercase tracking-wide text-tinta-tenue">
               <tr>
                 <th className="px-4 py-3">Estudiante</th>

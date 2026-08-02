@@ -10,6 +10,7 @@ import {
   respaldoControlAsistencia,
   respaldoCalificaciones,
   reporteRiesgoCurso,
+  actaPromocion,
 } from "@/lib/exportaciones";
 
 /**
@@ -60,6 +61,9 @@ export async function GET(
       break;
     case "riesgo":
       salida = await reporteRiesgoCurso(user.colegioId, cursoId);
+      break;
+    case "acta-promocion":
+      salida = await actaPromocion(user.colegioId, cursoId);
       break;
     default:
       return new Response("Tipo de exportación no válido.", { status: 400 });

@@ -73,7 +73,14 @@ export default async function CierreAnualPage({
               cursos={cursos.map((c) => ({ id: c.id, etiqueta: nombreCurso(c) }))}
               cursoId={cursoSel.id}
             />
-            <BotonImprimir>Imprimir acta</BotonImprimir>
+            <a
+              href={`/api/exportar/acta-promocion?cursoId=${cursoSel.id}`}
+              className="btn btn-secundario btn-sm"
+              data-noprint
+            >
+              Descargar acta (CSV)
+            </a>
+            <BotonImprimir>Imprimir</BotonImprimir>
           </div>
         }
       />

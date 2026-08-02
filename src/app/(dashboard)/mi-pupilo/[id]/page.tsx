@@ -65,6 +65,31 @@ export default async function MiPupiloPage({
 
   const curso = estudiante.matriculas[0]?.curso ?? null;
 
+  // Resultado del año: solo si dirección ya firmó la resolución (art. 11).
+  const resolucion = await prisma.resolucionPromocion.findFirst({
+    where: { colegioId: user.colegioId, estudianteId: id },
+    orderBy: { resueltoEn: "desc" },
+    select: {
+      estado: true,
+      fundamento: true,
+      resueltoEn: true,
+      anioEscolarId: true,
+    },
+  });
+  const anioResolucion = resolucion
+    ? await prisma.anioEscolar.findUnique({
+        where: { id: resolucion.anioEscolarId },
+        select: { anio: true },
+      })
+    : null;
+  const resolucionAnual = resolucion
+    ? {
+        estado: resolucion.estado as "PROMOVIDO" | "REPITE" | "ANALISIS",
+        fundamento: resolucion.fundamento,
+        anio: anioResolucion?.anio ?? "",
+      }
+    : null;
+
   const [asistencias, ausentes, justificaciones, mensajes, asignaturas, anotaciones, comunicados] = await Promise.all([
     prisma.asistenciaDiaria.findMany({
       where: { colegioId: user.colegioId, estudianteId: id },
@@ -227,6 +252,42 @@ export default async function MiPupiloPage({
           </p>
         </div>
       </div>
+
+      {/*
+        Resultado del año: solo aparece cuando dirección ya firmó la resolución
+        (Decreto 67, art. 11). Antes de eso la familia no ve ninguna propuesta:
+        sería informar una decisión que el colegio aún no ha tomado.
+      */}
+      {resolucionAnual && (
+        <section
+          className={`mt-6 rounded-xl border p-4 sm:p-5 ${
+            resolucionAnual.estado === "PROMOVIDO"
+              ? "border-exito/25 bg-exito-suave/60"
+              : resolucionAnual.estado === "REPITE"
+                ? "border-peligro/25 bg-peligro-suave/60"
+                : "border-alerta/25 bg-alerta-suave/60"
+          }`}
+          aria-labelledby="resultado-anual"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-tinta-tenue">
+            Resultado del año escolar {resolucionAnual.anio}
+          </p>
+          <h2 id="resultado-anual" className="mt-1 font-display text-2xl font-bold text-tinta">
+            {resolucionAnual.estado === "PROMOVIDO"
+              ? `${estudiante.nombres.split(" ")[0]} fue promovido(a)`
+              : resolucionAnual.estado === "REPITE"
+                ? "Repite el nivel"
+                : "En análisis por el colegio"}
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-tinta-suave">
+            {resolucionAnual.fundamento}
+          </p>
+          <p className="mt-3 text-xs text-tinta-tenue">
+            Resolución de la dirección del colegio conforme al Decreto 67 de evaluación y
+            promoción. Si tienes dudas, escríbele al profesor(a) jefe desde esta misma página.
+          </p>
+        </section>
+      )}
 
       {/* Línea de tiempo: notas, ausencias y anotaciones en un solo feed */}
       {(() => {

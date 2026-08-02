@@ -384,3 +384,128 @@ export async function reporteRiesgoCurso(colegioId: string, cursoId: string): Pr
   const archivo = `alertas_riesgo_${nombreSeguro(`${curso?.nivel}${curso?.letra}`)}.csv`;
   return { archivo, csv: construirCsv(encabezados, filas) };
 }
+
+// ── Acta de promoción del cierre anual (Decreto 67) ──────────────────────────
+
+/**
+ * ACTA DE PROMOCIÓN: la fila de cada estudiante con su promedio por asignatura,
+ * promedio general, asistencia, la situación propuesta por el sistema y —cuando
+ * existe— la resolución fundada de dirección (art. 11). Es el respaldo interno
+ * del cierre de año; el acta oficial se genera en SIGE.
+ */
+export async function actaPromocion(
+  colegioId: string,
+  cursoId: string
+): Promise<{ archivo: string; csv: string }> {
+  const { aproximarDecima } = await import("@/lib/calificaciones");
+  const { evaluarPromocion, ETIQUETA_PROMOCION } = await import("@/lib/promocion");
+
+  const curso = await prisma.curso.findFirst({
+    where: { id: cursoId, colegioId },
+    select: {
+      nivel: true,
+      letra: true,
+      anioEscolarId: true,
+      anioEscolar: { select: { anio: true } },
+    },
+  });
+  if (!curso) return { archivo: "acta-promocion.csv", csv: construirCsv(["Sin datos"], []) };
+
+  const [matriculas, asignaturas] = await Promise.all([
+    prisma.matricula.findMany({
+      where: { cursoId, colegioId, estado: "ACTIVA" },
+      select: { estudiante: { select: { id: true, rut: true, nombres: true, apellidos: true } } },
+    }),
+    prisma.asignatura.findMany({
+      where: { cursoId, colegioId },
+      select: {
+        nombre: true,
+        evaluaciones: {
+          where: { eliminadaEn: null, tipo: "SUMATIVA" },
+          select: {
+            ponderacion: true,
+            calificaciones: {
+              where: { eliminadaEn: null },
+              select: { estudianteId: true, nota: true, eximida: true },
+            },
+          },
+        },
+      },
+      orderBy: { nombre: "asc" },
+    }),
+  ]);
+
+  const ids = matriculas.map((m) => m.estudiante.id);
+  const [asistencias, resoluciones] = await Promise.all([
+    prisma.asistenciaDiaria.findMany({
+      where: { colegioId, estudianteId: { in: ids } },
+      select: { estudianteId: true, estado: true },
+    }),
+    prisma.resolucionPromocion.findMany({
+      where: { colegioId, anioEscolarId: curso.anioEscolarId, estudianteId: { in: ids } },
+      select: { estudianteId: true, estado: true, fundamento: true, resueltoEn: true },
+    }),
+  ]);
+  const asisPorEst = new Map<string, EstadoAsistencia[]>();
+  for (const a of asistencias) {
+    const l = asisPorEst.get(a.estudianteId) ?? [];
+    l.push(a.estado as EstadoAsistencia);
+    asisPorEst.set(a.estudianteId, l);
+  }
+  const resPorEst = new Map(resoluciones.map((r) => [r.estudianteId, r]));
+
+  const encabezados = [
+    "RUT",
+    "Apellidos",
+    "Nombres",
+    ...asignaturas.map((a) => a.nombre),
+    "Promedio general",
+    "Asistencia %",
+    "Situación propuesta",
+    "Resolución del colegio",
+    "Fecha resolución",
+    "Fundamento",
+  ];
+
+  const filas = matriculas
+    .map((m) => {
+      const est = m.estudiante;
+      const promedios = asignaturas.map((a) => {
+        const items: ItemPromedio[] = a.evaluaciones.map((e) => {
+          const cal = e.calificaciones.find((c) => c.estudianteId === est.id);
+          return {
+            nota: cal?.eximida ? null : cal?.nota ?? null,
+            ponderacion: e.ponderacion,
+            computa: !cal?.eximida,
+          };
+        });
+        const p = calcularPromedio(items).promedio;
+        return { nombre: a.nombre, promedio: p === null ? null : aproximarDecima(p) };
+      });
+      const resumen = calcularResumen(asisPorEst.get(est.id) ?? []);
+      const propuesta = evaluarPromocion({ asignaturas: promedios, asistencia: resumen.porcentaje });
+      const r = resPorEst.get(est.id);
+      return {
+        orden: `${est.apellidos}, ${est.nombres}`,
+        fila: [
+          est.rut,
+          est.apellidos,
+          est.nombres,
+          ...promedios.map((p) => (p.promedio === null ? "" : p.promedio.toFixed(1))),
+          propuesta.promedioGeneral === null ? "" : propuesta.promedioGeneral.toFixed(1),
+          resumen.porcentaje === null ? "" : resumen.porcentaje,
+          ETIQUETA_PROMOCION[propuesta.estado],
+          r ? ETIQUETA_PROMOCION[r.estado as keyof typeof ETIQUETA_PROMOCION] : "sin resolver",
+          r ? r.resueltoEn.toISOString().slice(0, 10) : "",
+          r ? r.fundamento.replace(/\s+/g, " ").slice(0, 900) : "",
+        ] as Array<string | number | null>,
+      };
+    })
+    .sort((a, b) => a.orden.localeCompare(b.orden, "es"))
+    .map((x) => x.fila);
+
+  return {
+    archivo: nombreSeguro(`acta-promocion-${curso.nivel}${curso.letra}-${curso.anioEscolar.anio}.csv`),
+    csv: construirCsv(encabezados, filas),
+  };
+}

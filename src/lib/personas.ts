@@ -53,13 +53,34 @@ export const GRUPO_ROL: Record<string, "equipo" | "familia" | "otro"> = {
   SOSTENEDOR: "otro",
 };
 
-/** Quién puede ENTRAR al directorio (ver personas del colegio). */
+/** Quién puede ENTRAR al directorio. */
 export const ROLES_VER_PERSONAS = new Set([
   "ADMIN",
   "DIRECTOR",
   "UTP",
   "INSPECTOR",
+  // Docentes: necesitan los datos de contacto de las familias de SUS cursos
+  // para poder comunicarse. Su vista va acotada (ver `alcanceFamilias`).
+  "PROFESOR_JEFE",
+  "PROFESOR",
 ]);
+
+/**
+ * Quién ve a TODAS las familias del colegio. El resto de los roles con acceso
+ * (docentes) solo ve a los apoderados de los estudiantes de sus cursos:
+ * minimización de datos (Ley 21.719), el mismo criterio que ya usa el resto de
+ * la plataforma. El equipo del colegio sí se ve completo — es la guía de
+ * contacto interna.
+ */
+export const ROLES_VER_TODAS_LAS_FAMILIAS = new Set([
+  "ADMIN",
+  "DIRECTOR",
+  "UTP",
+  "INSPECTOR",
+]);
+
+/** Roles considerados "familia" para efectos del acotamiento por curso. */
+export const ROLES_FAMILIA = new Set(["APODERADO", "ESTUDIANTE"]);
 
 /** Quién puede dar de alta, reactivar o revocar el acceso de una persona. */
 export const ROLES_GESTIONAR_PERSONAS = new Set(["ADMIN", "DIRECTOR"]);

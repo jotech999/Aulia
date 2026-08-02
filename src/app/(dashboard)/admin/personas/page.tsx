@@ -31,7 +31,7 @@ export default async function PersonasPage({
   if (!ROLES_VER_PERSONAS.has(user.rol)) notFound();
 
   const sp = await searchParams;
-  const { personas, total, conteoPorRol } = await listarPersonas(user.colegioId, {
+  const { personas, total, conteoPorRol, acotadoAMisCursos } = await listarPersonas(user, {
     q: sp.q,
     rol: sp.rol,
     inactivos: sp.inactivos === "1",
@@ -51,7 +51,11 @@ export default async function PersonasPage({
       <EncabezadoPagina
         icono="estudiantes"
         titulo="Personas"
-        descripcion="Todo el que tiene cuenta en el colegio: equipo y apoderados. Busca, agrega y administra accesos."
+        descripcion={
+          acotadoAMisCursos
+            ? "El equipo del colegio y los apoderados de tus cursos, con sus datos de contacto."
+            : "Todo el que tiene cuenta en el colegio: equipo y apoderados. Busca, agrega y administra accesos."
+        }
         acciones={
           puedeGestionar && rolesPermitidos.length > 0 ? (
             <NuevaPersona rolesPermitidos={rolesPermitidos} />
@@ -61,11 +65,24 @@ export default async function PersonasPage({
 
       <FiltrosPersonas conteoPorRol={conteoPorRol} total={total} />
 
+      {acotadoAMisCursos && (
+        <p className="mt-3 rounded-lg border border-marca-200 bg-marca-50 px-3 py-2 text-xs leading-relaxed text-marca-800">
+          Ves a los apoderados de los estudiantes de <strong>tus cursos</strong> y al equipo del
+          colegio. Las familias de otros cursos no aparecen aquí.
+        </p>
+      )}
+
       {personas.length === 0 ? (
         <div className="mt-4">
           <EstadoVacio
             icono="estudiantes"
-            titulo={hayFiltro ? "Sin resultados" : "Aún no hay personas registradas"}
+            titulo={
+              hayFiltro
+                ? "Sin resultados"
+                : acotadoAMisCursos
+                  ? "Aún no hay apoderados en tus cursos"
+                  : "Aún no hay personas registradas"
+            }
             descripcion={
               hayFiltro
                 ? "Prueba con otro nombre, correo o RUT, o quita el filtro de rol."
@@ -178,9 +195,10 @@ export default async function PersonasPage({
       )}
 
       <p className="mt-3 text-xs leading-relaxed text-tinta-tenue">
-        Revocar el acceso no borra a la persona ni sus registros: el libro de clases conserva
-        quién hizo cada cosa (Circular 30). Una misma persona puede tener más de un rol —
-        aparecerá una vez por cada uno.
+        {puedeGestionar
+          ? "Revocar el acceso no borra a la persona ni sus registros: el libro de clases conserva quién hizo cada cosa (Circular 30). "
+          : ""}
+        Una misma persona puede tener más de un rol — aparecerá una vez por cada uno.
       </p>
     </div>
   );

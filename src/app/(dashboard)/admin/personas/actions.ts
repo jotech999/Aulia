@@ -12,7 +12,6 @@ import {
   crearPersonaSchema,
   puedeOtorgar,
   ROLES_GESTIONAR_PERSONAS,
-  ROLES_VER_PERSONAS,
 } from "@/lib/personas";
 import { buscarApoderadosVinculables } from "./consultas";
 
@@ -218,7 +217,11 @@ export async function buscarApoderados(input: unknown): Promise<
   if (!estudianteId) return { ok: false, error: "Datos inválidos." };
 
   const { user } = await requerirSesion();
-  if (!ROLES_VER_PERSONAS.has(user.rol)) {
+  // Este buscador sirve para VINCULAR y devuelve apoderados de todo el colegio,
+  // sin el acotamiento por curso del directorio. Por eso exige el mismo permiso
+  // que vincular (dirección), no el de solo mirar: si no, un docente podría
+  // consultar por aquí a familias que no le corresponden.
+  if (!ROLES_GESTIONAR_PERSONAS.has(user.rol)) {
     return { ok: false, error: "No tienes permiso para consultar apoderados." };
   }
   // Multi-tenant: el estudiante debe ser del colegio en sesión.

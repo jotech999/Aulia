@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { normalizarRut } from "@/lib/rut";
+import { ROLES_VER_TODAS_LAS_FAMILIAS } from "@/lib/personas";
+import { whereCursosAccesibles } from "@/app/(dashboard)/libro-clases/asistencia/consultas";
 
 /**
  * Consultas del directorio de personas. Todo va acotado al colegio de la sesión
@@ -27,6 +29,8 @@ export type PersonaFila = {
 export type ResultadoDirectorio = {
   personas: PersonaFila[];
   total: number;
+  /** true cuando el usuario solo ve a las familias de sus cursos. */
+  acotadoAMisCursos: boolean;
   /** Recuento por rol de TODO el colegio (no del filtro), para las pestañas. */
   conteoPorRol: Record<string, number>;
 };
@@ -35,11 +39,44 @@ const nombreCursoCorto = (c: { nivel: string; letra: string } | null | undefined
   c ? `${c.nivel} ${c.letra}` : null;
 
 export async function listarPersonas(
-  colegioId: string,
+  user: { id: string; rol: string; colegioId: string },
   filtros: { q?: string; rol?: string; inactivos?: boolean }
 ): Promise<ResultadoDirectorio> {
+  const colegioId = user.colegioId;
   const q = filtros.q?.trim() ?? "";
   const rutBuscado = q ? normalizarRut(q) : null;
+
+  /*
+   * Acotamiento por curso: un docente ve al equipo del colegio completo (es la
+   * guía de contacto interna) pero SOLO a las familias de sus cursos. Sin esto,
+   * cualquier profesor de asignatura tendría el teléfono y el correo de todos
+   * los apoderados del colegio, que no es lo que necesita para trabajar.
+   */
+  const verTodasLasFamilias = ROLES_VER_TODAS_LAS_FAMILIAS.has(user.rol);
+  const soloMisFamilias = verTodasLasFamilias
+    ? {}
+    : {
+        OR: [
+          // Personal del colegio: visible para todos los que entran aquí.
+          { rol: { notIn: ["APODERADO", "ESTUDIANTE"] as never } },
+          // Familias: solo las ligadas a estudiantes de sus cursos.
+          {
+            rol: "APODERADO" as never,
+            usuario: {
+              apoderadoDe: {
+                some: {
+                  estudiante: {
+                    colegioId,
+                    matriculas: {
+                      some: { estado: "ACTIVA", curso: whereCursosAccesibles(user) },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      };
 
   // Búsqueda: nombre, correo o RUT. `mode: insensitive` cubre mayúsculas; los
   // acentos los resuelve el propio Postgres según su colación.
@@ -59,6 +96,7 @@ export async function listarPersonas(
         colegioId,
         ...(filtros.inactivos ? {} : { activa: true }),
         ...(filtros.rol ? { rol: filtros.rol as never } : {}),
+        ...soloMisFamilias,
         usuario: dondeUsuario,
       },
       select: {
@@ -114,7 +152,7 @@ export async function listarPersonas(
     }),
     prisma.membresia.groupBy({
       by: ["rol"],
-      where: { colegioId, activa: true },
+      where: { colegioId, activa: true, ...soloMisFamilias },
       _count: { _all: true },
     }),
   ]);
@@ -142,6 +180,7 @@ export async function listarPersonas(
   return {
     personas,
     total: personas.length,
+    acotadoAMisCursos: !verTodasLasFamilias,
     conteoPorRol: Object.fromEntries(conteos.map((c) => [c.rol, c._count._all])),
   };
 }

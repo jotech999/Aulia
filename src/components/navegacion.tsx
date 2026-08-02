@@ -79,6 +79,7 @@ const GRUPOS_BASE: Grupo[] = [
     items: [
       { href: "/comunicacion", etiqueta: "Comunicación", icono: "comunicacion", roles: [...STAFF_GENERAL, "APODERADO"] },
       { href: "/mensajes", etiqueta: "Mensajes", icono: "comunicacion", roles: ["PROFESOR_JEFE", "ADMIN", "DIRECTOR", "UTP", "APODERADO"] },
+      { href: "/admin/personas", etiqueta: "Apoderados y equipo", icono: "estudiantes", roles: ["PROFESOR_JEFE", "PROFESOR"] },
       { href: "/convivencia", etiqueta: "Convivencia", icono: "convivencia" },
       { href: "/convivencia/entrevistas", etiqueta: "Entrevistas", icono: "comunicacion" },
       { href: "/comunidad/reuniones-apoderados", etiqueta: "Reuniones de apoderados", icono: "comunicacion", roles: ["ADMIN", "DIRECTOR", "UTP", "PROFESOR_JEFE"] },

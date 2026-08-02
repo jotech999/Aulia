@@ -275,6 +275,23 @@ async function dibujarPagina(
         textoDer(`${snapshot.asistenciaPct.toFixed(1)}%`, derX, { size: 11, bold: true });
         ctx.y -= 16;
       }
+      // Situación final: solo aparece si la dirección firmó la resolución del
+      // cierre de año (Decreto 67, art. 10 y 11).
+      if (snapshot.situacionFinal) {
+        const etiqueta =
+          snapshot.situacionFinal === "PROMOVIDO"
+            ? "Promovido(a)"
+            : snapshot.situacionFinal === "REPITE"
+              ? "Repite el nivel"
+              : "En análisis (Art. 11)";
+        texto(ctx, "Situación final", { size: 11, bold: true });
+        textoDer(etiqueta, derX, {
+          size: 11,
+          bold: true,
+          color: snapshot.situacionFinal === "PROMOVIDO" ? colorProm(7) : colorProm(1),
+        });
+        ctx.y -= 16;
+      }
       if (snapshot.concepto) {
         ctx.y -= 6;
         texto(ctx, "Observaciones del profesor(a) jefe:", { size: 10, bold: true });

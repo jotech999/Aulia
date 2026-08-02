@@ -229,8 +229,47 @@ export async function InsightsAulia({
   } catch {
     return null; // el radar nunca debe botar el panel
   }
-  if (insights.length === 0) return null;
   const conAuli = iaDisponible();
+
+  // Sin pendientes: en vez de desaparecer (que se lee como "esto no existe"),
+  // el radar confirma que revisó y está todo al día.
+  if (insights.length === 0) {
+    return (
+      <section aria-labelledby="radar-aulia" className="surgir-secuencia mt-5">
+        <h2
+          id="radar-aulia"
+          className="text-xs font-semibold uppercase tracking-wider text-tinta-tenue"
+        >
+          Radar Aulia · lo que merece tu atención hoy
+        </h2>
+        <div className="tarjeta-int mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-exito/20 bg-exito-suave/50 p-3.5 shadow-suave">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-superficie text-exito shadow-suave"
+            aria-hidden
+          >
+            ✓
+          </span>
+          <p className="min-w-0 flex-1 text-sm text-tinta">
+            <strong>Todo al día.</strong>{" "}
+            <span className="text-tinta-suave">
+              {esGestion
+                ? "Sin firmas ni notas pendientes, y sin señales de convivencia esta semana."
+                : "Sin clases por firmar, notas atrasadas ni mensajes sin leer."}
+            </span>
+          </p>
+          {conAuli && (
+            <BotonPreguntarAuli
+              pregunta={
+                esGestion
+                  ? "Dame un panorama del colegio hoy: asistencia, pendientes y alertas."
+                  : "¿Cómo viene mi semana? Revisa mis pendientes y mis próximas evaluaciones."
+              }
+            />
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby="radar-aulia" className="surgir-secuencia mt-5">

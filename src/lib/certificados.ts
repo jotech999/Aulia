@@ -157,4 +157,10 @@ export type SnapshotCertificado = {
   promedioGeneral?: number | null;
   concepto?: string; // concepto / observación del profesor jefe (opcional)
   anual?: boolean;
+  /**
+   * Informe anual: situación final resuelta por la dirección (Decreto 67, art.
+   * 10 y 11). Solo se incluye si la resolución YA está firmada en el cierre de
+   * año; un informe emitido antes no afirma nada sobre la promoción.
+   */
+  situacionFinal?: "PROMOVIDO" | "REPITE" | "ANALISIS";
 };

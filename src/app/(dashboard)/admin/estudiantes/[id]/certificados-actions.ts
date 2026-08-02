@@ -262,6 +262,18 @@ export async function emitirCertificado(
       );
       if (concepto) snapshot.concepto = concepto;
     }
+
+    // Informe anual: si la dirección YA firmó la resolución de promoción del
+    // cierre de año, el informe la declara. Si no existe, el informe no dice
+    // nada sobre promoción — no le corresponde adelantarse a la resolución.
+    if (anual) {
+      const resolucion = await prisma.resolucionPromocion.findFirst({
+        where: { colegioId: user.colegioId, estudianteId },
+        orderBy: { resueltoEn: "desc" },
+        select: { estado: true },
+      });
+      if (resolucion) snapshot.situacionFinal = resolucion.estado;
+    }
     snapshot.leyenda =
       tipo === "INFORME_ANUAL"
         ? LEYENDA_INFORME_ANUAL

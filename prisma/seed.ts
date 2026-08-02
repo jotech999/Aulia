@@ -13,7 +13,7 @@
  *   inspector@demo.cl (INSPECTOR)
  *   cvargas@demo.cl, rparedes@demo.cl … (PROFESOR_JEFE, uno por curso)
  *   driquelme@demo.cl (PROFESOR de Matemática en varios cursos, sin jefatura)
- *   apoderado1@demo.cl / apoderado2@demo.cl / apoderado3@demo.cl (APODERADO)
+ *   apoderado1@ … apoderado4@demo.cl (APODERADO; apoderado1 y 2 con hermanos)
  *   estudiante@demo.cl (ESTUDIANTE, portal propio)
  */
 import { CalidadApoderado, PrismaClient, Rol } from "@prisma/client";
@@ -481,27 +481,43 @@ async function main() {
     { titulo: "Salida pedagógica 5° básico", cuerpo: "El 5° básico realizará una salida pedagógica al Museo de Historia Natural. Se requiere autorización firmada y colación. Más detalles con el profesor jefe.", alcance: "NIVEL" as const, nivel: "5B", cursoId: null },
     { titulo: "Cambio de horario 6°A", cuerpo: "Por reunión técnica, el 6°A tendrá salida anticipada el próximo viernes a las 13:00 hrs. Agradecemos coordinar el retiro.", alcance: "CURSO" as const, nivel: null, cursoId: cursos.find((c) => c.nivel === "6B")!.id },
   ];
-  // Apoderados demo (2 primeros estudiantes de 5°A y 6°A).
+  /*
+   * Apoderados demo. Reparto pensado para que la demostración se pueda MOSTRAR:
+   * cvargas@demo.cl es jefa de 1°B y es la cuenta con la que se prueba la
+   * plataforma, así que su curso tiene que tener apoderados — antes todos
+   * estaban en 5° y 6°, y su listado de familias salía vacío.
+   *
+   * Incluye además el caso de HERMANOS (una misma apoderada con dos pupilos en
+   * cursos distintos), que es lo que justifica "vincular apoderado existente".
+   */
+  const est1 = estFull.filter((e) => e.cursoId === cursos.find((c) => c.nivel === "1B")!.id);
   const est5 = estFull.filter((e) => e.cursoId === curso5.id);
   const est6 = estFull.filter((e) => e.cursoId === cursos.find((c) => c.nivel === "6B")!.id);
   const apoData = [
-    { rut: 16111111, nombre: "Claudia Rojas", email: "apoderado1@demo.cl", est: est5[0], parentesco: "madre", calidad: CalidadApoderado.TITULAR },
-    { rut: 16222222, nombre: "Sergio Díaz", email: "apoderado2@demo.cl", est: est6[0], parentesco: "padre", calidad: CalidadApoderado.TITULAR },
-    { rut: 16333333, nombre: "Verónica Soto", email: "apoderado3@demo.cl", est: est5[1], parentesco: "madre", calidad: CalidadApoderado.TITULAR },
+    // Claudia tiene dos hijos: uno en 1°B (jefatura de cvargas) y otro en 5°B.
+    { rut: 16111111, nombre: "Claudia Rojas", email: "apoderado1@demo.cl", ests: [est1[0], est5[0]], parentesco: "madre", calidad: CalidadApoderado.TITULAR },
+    { rut: 16222222, nombre: "Sergio Díaz", email: "apoderado2@demo.cl", ests: [est1[1], est6[0]], parentesco: "padre", calidad: CalidadApoderado.TITULAR },
+    { rut: 16333333, nombre: "Verónica Soto", email: "apoderado3@demo.cl", ests: [est1[2]], parentesco: "madre", calidad: CalidadApoderado.TITULAR },
+    { rut: 16444444, nombre: "Marisol Herrera", email: "apoderado4@demo.cl", ests: [est5[1]], parentesco: "madre", calidad: CalidadApoderado.TITULAR },
   ];
   const apoderados = [];
   for (const a of apoData) {
     const u = await crearUsuario(a.rut, a.nombre, a.email, Rol.APODERADO);
-    const vinculo = await prisma.apoderado.create({
-      data: {
-        usuarioId: u.id,
-        estudianteId: a.est.id,
-        parentesco: a.parentesco,
-        calidad: a.calidad,
-      },
-      select: { id: true },
-    });
-    apoderados.push({ ...a, usuarioId: u.id, apoderadoId: vinculo.id });
+    for (const est of a.ests.filter(Boolean)) {
+      const vinculo = await prisma.apoderado.create({
+        data: {
+          usuarioId: u.id,
+          estudianteId: est.id,
+          parentesco: a.parentesco,
+          calidad: a.calidad,
+        },
+        select: { id: true },
+      });
+      // El primer pupilo es el que usan entrevistas y comunicados de ejemplo.
+      if (est.id === a.ests[0].id) {
+        apoderados.push({ ...a, est: a.ests[0], usuarioId: u.id, apoderadoId: vinculo.id });
+      }
+    }
   }
   for (let i = 0; i < comunicadosDef.length; i++) {
     const def = comunicadosDef[i];
@@ -529,9 +545,9 @@ async function main() {
 
   // ── Entrevistas ─────────────────────────────────────────────────────────────
   const entrevistasDef = [
-    { est: est5[0], apoderado: "Claudia Rojas", motivo: "Rendimiento en Matemática", acuerdos: "Reforzar tareas en casa y revisar cuaderno semanalmente.", compromisos: "La apoderada revisará las tareas; el colegio enviará guías de apoyo.", proxima: utc(ANIO, 7, 10) },
-    { est: est6[0], apoderado: "Sergio Díaz", motivo: "Atrasos reiterados", acuerdos: "Ajustar rutina matinal para llegar puntual.", compromisos: "Ingreso antes de las 08:00 durante dos semanas.", proxima: null },
-    { est: est5[1], apoderado: "Verónica Soto", motivo: "Felicitaciones por participación", acuerdos: "Mantener el buen desempeño y postular a la academia de lenguaje.", compromisos: null, proxima: null },
+    { est: est1[0], apoderado: "Claudia Rojas", motivo: "Rendimiento en Matemática", acuerdos: "Reforzar tareas en casa y revisar cuaderno semanalmente.", compromisos: "La apoderada revisará las tareas; el colegio enviará guías de apoyo.", proxima: utc(ANIO, 7, 10) },
+    { est: est1[1], apoderado: "Sergio Díaz", motivo: "Atrasos reiterados", acuerdos: "Ajustar rutina matinal para llegar puntual.", compromisos: "Ingreso antes de las 08:00 durante dos semanas.", proxima: null },
+    { est: est1[2], apoderado: "Verónica Soto", motivo: "Felicitaciones por participación", acuerdos: "Mantener el buen desempeño y postular a la academia de lenguaje.", compromisos: null, proxima: null },
   ];
   for (const e of entrevistasDef) {
     const vinculo = apoderados.find(

@@ -190,6 +190,14 @@ body {
   to { opacity: 1; transform: none; }
 }
 
+/* Entrada que NO toca transform: para paneles posicionados (cajón del menú,
+   globos anclados). `surgir` anima transform con fill:both y cancela las
+   utilidades de posición del propio elemento. */
+@keyframes aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Transición al navegar entre páginas (la aplica el template del dashboard a
    cada ruta). Fade + leve desplazamiento; el guard global de
    prefers-reduced-motion (más abajo) la neutraliza para accesibilidad. */

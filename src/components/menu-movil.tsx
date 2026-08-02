@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { NavEscritorio } from "./navegacion";
 import { Isotipo } from "./ui/isotipo";
@@ -10,6 +11,13 @@ import { Isotipo } from "./ui/isotipo";
  * etiquetada (la misma del escritorio). Reemplaza la tira horizontal de iconos,
  * inusable cuando un rol ve muchos módulos. Se cierra al navegar, con Esc o al
  * tocar fuera.
+ *
+ * OJO — el cajón se monta con portal en <body> a propósito. Este botón vive
+ * dentro de la barra superior, que lleva `backdrop-filter` (.topbar-vidrio), y
+ * un elemento con backdrop-filter se vuelve el bloque contenedor de sus
+ * descendientes `position: fixed`. Sin el portal, `fixed inset-0` se resolvía
+ * contra la barra (≈52px de alto) y el menú se dibujaba aplastado dentro de
+ * ella: en el teléfono simplemente no se veía la navegación.
  */
 export function MenuMovil({
   rol,
@@ -21,7 +29,10 @@ export function MenuMovil({
   badges?: Record<string, number>;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [montado, setMontado] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => setMontado(true), []);
 
   // Cierra al cambiar de ruta.
   useEffect(() => setAbierto(false), [pathname]);
@@ -49,15 +60,16 @@ export function MenuMovil({
         onClick={() => setAbierto(true)}
         aria-label="Abrir menú"
         aria-expanded={abierto}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-tinta-suave transition-colors hover:bg-superficie-3"
+        className="flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-borde bg-superficie px-2 text-tinta-suave shadow-suave transition-colors hover:bg-superficie-3"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" className="h-5 w-5" aria-hidden>
           <path d="M3 6h18M3 12h18M3 18h18" />
         </svg>
+        <span className="hidden text-xs font-semibold xs:inline">Menú</span>
       </button>
 
-      {abierto && (
-        <div className="fixed inset-0 z-50 md:hidden">
+      {abierto && montado && createPortal(
+        <div className="fixed inset-0 z-[80] md:hidden">
           <div
             className="absolute inset-0 bg-tinta/40 backdrop-blur-[1px]"
             onClick={() => setAbierto(false)}
@@ -67,7 +79,7 @@ export function MenuMovil({
             role="dialog"
             aria-modal="true"
             aria-label="Menú de navegación"
-            className="animar-surgir absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-borde bg-superficie px-3 py-4 shadow-flotante"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-[aparecer_0.18s_ease-out_both] flex-col overflow-hidden border-r border-borde bg-superficie px-3 py-4 shadow-flotante"
           >
             <div className="mb-4 flex items-center justify-between px-2">
               <div className="flex min-w-0 items-center gap-2.5">
@@ -94,7 +106,8 @@ export function MenuMovil({
               <NavEscritorio rol={rol} badges={badges} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

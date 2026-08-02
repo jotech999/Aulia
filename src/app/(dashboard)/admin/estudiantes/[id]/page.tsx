@@ -8,6 +8,7 @@ import { autorizarCrearAnotacion } from "@/lib/anotaciones";
 import { participacionEnHilo } from "@/lib/mensajes";
 import { HiloMensajes } from "@/components/mensajes/hilo";
 import { ApoderadosSalud } from "./apoderados-salud";
+import { VincularApoderado } from "@/app/(dashboard)/admin/personas/vincular-apoderado";
 import { descifrarSeguro } from "@/lib/cifrado";
 import { iaDisponible } from "@/lib/ia/cliente";
 import { InformeIA } from "./informe-ia-cliente";
@@ -482,6 +483,14 @@ export default async function FichaEstudiantePage({
             />
           );
         })()}
+
+        {/* Vincular un apoderado ya registrado (caso hermanos): evita crear
+            una cuenta duplicada reescribiendo los mismos datos. */}
+        {["ADMIN", "DIRECTOR"].includes(user.rol) && (
+          <div className="mt-3">
+            <VincularApoderado estudianteId={estudiante.id} />
+          </div>
+        )}
 
         {participacion && (
           <section id="mensajes" className="mt-8 scroll-mt-20">

@@ -183,6 +183,16 @@ body {
   }
 }
 
+/* Tira horizontal deslizable (accesos rápidos, filtros de rol): sin barra de
+   desplazamiento visible, para que se lea como una tira y no como una tabla. */
+.tira-movil {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tira-movil::-webkit-scrollbar {
+  display: none;
+}
+
 /* Movimiento --------------------------------------------------------------- */
 
 @keyframes surgir {

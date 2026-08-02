@@ -93,6 +93,7 @@ const GRUPOS_BASE: Grupo[] = [
       { href: "/admin/estudiantes", etiqueta: "Estudiantes", icono: "estudiantes" },
       { href: "/admin/admision", etiqueta: "Admisión", icono: "estudiantes", roles: ["ADMIN", "DIRECTOR"] },
       { href: "/admin/matricular", etiqueta: "Matricular estudiante", icono: "estudiantes", roles: ["ADMIN", "DIRECTOR"] },
+      { href: "/admin/personas", etiqueta: "Personas", icono: "estudiantes", roles: ["ADMIN", "DIRECTOR", "UTP", "INSPECTOR"] },
       { href: "/admin/apoderados", etiqueta: "Apoderados por curso", icono: "convivencia", roles: ["ADMIN", "DIRECTOR", "UTP"] },
       { href: "/admin/importar", etiqueta: "Migración asistida", icono: "estudiantes", roles: ["ADMIN", "DIRECTOR"] },
       { href: "/admin/finanzas", etiqueta: "Finanzas", icono: "calificaciones", roles: ["ADMIN", "DIRECTOR"] },

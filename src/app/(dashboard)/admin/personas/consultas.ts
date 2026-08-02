@@ -31,6 +31,8 @@ export type ResultadoDirectorio = {
   total: number;
   /** true cuando el usuario solo ve a las familias de sus cursos. */
   acotadoAMisCursos: boolean;
+  /** Estudiantes del alcance que NO tienen ningún apoderado registrado. */
+  sinApoderado: { id: string; nombre: string; curso: string | null }[];
   /** Recuento por rol de TODO el colegio (no del filtro), para las pestañas. */
   conteoPorRol: Record<string, number>;
 };
@@ -90,7 +92,7 @@ export async function listarPersonas(
       }
     : {};
 
-  const [membresias, conteos] = await Promise.all([
+  const [membresias, conteos, huerfanos] = await Promise.all([
     prisma.membresia.findMany({
       where: {
         colegioId,
@@ -155,6 +157,35 @@ export async function listarPersonas(
       where: { colegioId, activa: true, ...soloMisFamilias },
       _count: { _all: true },
     }),
+    /*
+     * Estudiantes del alcance SIN apoderado registrado. Es la explicación
+     * honesta de por qué la lista puede venir vacía, y además es información
+     * accionable: si no hay apoderado, no hay a quién avisarle nada.
+     */
+    prisma.estudiante.findMany({
+      where: {
+        colegioId,
+        apoderados: { none: {} },
+        matriculas: {
+          some: {
+            estado: "ACTIVA",
+            ...(verTodasLasFamilias ? {} : { curso: whereCursosAccesibles(user) }),
+          },
+        },
+      },
+      select: {
+        id: true,
+        nombres: true,
+        apellidos: true,
+        matriculas: {
+          where: { estado: "ACTIVA" },
+          select: { curso: { select: { nivel: true, letra: true } } },
+          take: 1,
+        },
+      },
+      orderBy: [{ apellidos: "asc" }, { nombres: "asc" }],
+      take: 60,
+    }),
   ]);
 
   const personas: PersonaFila[] = membresias.map((m) => ({
@@ -181,6 +212,11 @@ export async function listarPersonas(
     personas,
     total: personas.length,
     acotadoAMisCursos: !verTodasLasFamilias,
+    sinApoderado: huerfanos.map((e) => ({
+      id: e.id,
+      nombre: `${e.apellidos}, ${e.nombres}`,
+      curso: nombreCursoCorto(e.matriculas[0]?.curso),
+    })),
     conteoPorRol: Object.fromEntries(conteos.map((c) => [c.rol, c._count._all])),
   };
 }

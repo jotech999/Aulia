@@ -31,7 +31,7 @@ export default async function PersonasPage({
   if (!ROLES_VER_PERSONAS.has(user.rol)) notFound();
 
   const sp = await searchParams;
-  const { personas, total, conteoPorRol, acotadoAMisCursos } = await listarPersonas(user, {
+  const { personas, total, conteoPorRol, acotadoAMisCursos, sinApoderado } = await listarPersonas(user, {
     q: sp.q,
     rol: sp.rol,
     inactivos: sp.inactivos === "1",
@@ -45,6 +45,7 @@ export default async function PersonasPage({
     verRutCompleto ? rut : rut.replace(/^(\d{2})[\d.]+(-[\dkK])$/, "$1.···.···$2");
   const rolesPermitidos = rolesQuePuedeOtorgar(user.rol);
   const hayFiltro = Boolean(sp.q || sp.rol);
+  const apoderadosVisibles = conteoPorRol["APODERADO"] ?? 0;
 
   return (
     <div>
@@ -69,6 +70,13 @@ export default async function PersonasPage({
         <p className="mt-3 rounded-lg border border-marca-200 bg-marca-50 px-3 py-2 text-xs leading-relaxed text-marca-800">
           Ves a los apoderados de los estudiantes de <strong>tus cursos</strong> y al equipo del
           colegio. Las familias de otros cursos no aparecen aquí.
+          {apoderadosVisibles === 0 && (
+            <>
+              {" "}
+              <strong>Por ahora no aparece ninguno</strong>: los estudiantes de tus cursos todavía
+              no tienen un apoderado registrado en la plataforma.
+            </>
+          )}
         </p>
       )}
 
@@ -192,6 +200,45 @@ export default async function PersonasPage({
             </tbody>
           </table>
         </div>
+      )}
+
+      {sinApoderado.length > 0 && (
+        <section
+          aria-labelledby="sin-apoderado"
+          className="mt-5 rounded-xl border border-alerta/25 bg-alerta-suave/50 p-4"
+        >
+          <h2 id="sin-apoderado" className="text-sm font-semibold text-tinta">
+            {sinApoderado.length}{" "}
+            {sinApoderado.length === 1
+              ? "estudiante sin apoderado registrado"
+              : "estudiantes sin apoderado registrado"}
+          </h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-tinta-suave">
+            Sin un apoderado con cuenta no hay a quién avisarle de una evaluación ni con quién
+            comunicarse desde la plataforma.{" "}
+            {puedeGestionar
+              ? "Agrégalo desde la ficha del estudiante con “Vincular apoderado existente”, o créalo aquí con “Agregar persona”."
+              : "Pídele a dirección que los registre."}
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {sinApoderado.slice(0, 24).map((e) => (
+              <li key={e.id}>
+                <Link
+                  href={`/admin/estudiantes/${e.id}`}
+                  className="inline-block rounded-lg border border-borde bg-superficie px-2 py-1 text-xs text-tinta-suave transition-colors hover:border-borde-fuerte hover:text-tinta"
+                >
+                  {e.nombre}
+                  {e.curso ? <span className="text-tinta-tenue"> · {e.curso}</span> : null}
+                </Link>
+              </li>
+            ))}
+            {sinApoderado.length > 24 && (
+              <li className="self-center text-xs text-tinta-tenue">
+                y {sinApoderado.length - 24} más
+              </li>
+            )}
+          </ul>
+        </section>
       )}
 
       <p className="mt-3 text-xs leading-relaxed text-tinta-tenue">

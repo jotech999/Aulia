@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requerirSesion } from "@/lib/sesion";
 import { registrarAuditoria } from "@/lib/auditoria";
 import { ROLES_RESOLVER_PROMOCION } from "@/lib/promocion";
+import { notificarApoderadosDeEstudiante } from "@/lib/notificaciones";
 
 type Resultado<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -21,6 +22,8 @@ const schema = z.object({
     .max(4000),
   promedioGeneral: z.number().finite().min(1).max(7).nullable().optional(),
   asistencia: z.number().int().min(0).max(100).nullable().optional(),
+  /** Aviso a la familia: explícito y opcional — dirección decide cuándo comunica. */
+  avisarApoderado: z.boolean().optional(),
 });
 
 /**
@@ -113,6 +116,19 @@ export async function resolverPromocion(input: unknown): Promise<Resultado> {
       tx
     );
   });
+
+  // Aviso a la familia: SOLO si dirección lo pidió explícitamente. El resultado
+  // del año es una comunicación sensible; el colegio elige cuándo la envía y a
+  // quiénes, no se dispara solo al guardar.
+  if (datos.avisarApoderado) {
+    await notificarApoderadosDeEstudiante(user.colegioId, datos.estudianteId, {
+      tipo: "GENERAL",
+      titulo: "Resultado del año escolar disponible",
+      cuerpo:
+        "La dirección del colegio registró la situación final de tu pupilo(a). Puedes revisarla en su ficha.",
+      enlace: `/mi-pupilo/${datos.estudianteId}`,
+    });
+  }
 
   revalidatePath("/cierre-anual");
   return { ok: true };

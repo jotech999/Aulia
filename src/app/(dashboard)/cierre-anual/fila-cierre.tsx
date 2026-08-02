@@ -45,6 +45,7 @@ export function FilaCierre({
     fila.resolucion?.estado ?? (fila.estadoPropuesto === "ANALISIS" ? "PROMOVIDO" : fila.estadoPropuesto)
   );
   const [fundamento, setFundamento] = useState(fila.resolucion?.fundamento ?? "");
+  const [avisar, setAvisar] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +65,7 @@ export function FilaCierre({
         fundamento,
         promedioGeneral: fila.promedioGeneral,
         asistencia: fila.asistencia,
+        avisarApoderado: avisar,
       });
       if (r.ok) {
         toast.exito("Resolución registrada.");
@@ -218,6 +220,22 @@ export function FilaCierre({
                       aria-label="Fundamento de la resolución"
                     />
                     {error && <p className="mt-1.5 text-sm text-peligro">{error}</p>}
+                    <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg border border-borde bg-superficie p-2.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={avisar}
+                        onChange={(e) => setAvisar(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="font-medium text-tinta">Avisar al apoderado</span>
+                        <span className="block text-xs text-tinta-tenue">
+                          Le llega una notificación para que revise el resultado en la ficha de su
+                          pupilo. El aviso no incluye el fundamento. Déjalo sin marcar si el
+                          colegio prefiere comunicarlo en persona o todo junto al final.
+                        </span>
+                      </span>
+                    </label>
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <Boton
                         type="button"

@@ -169,6 +169,18 @@ export const HERRAMIENTAS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "situacion_final_anio",
+    description:
+      "Situación final del año escolar de un estudiante (promovido, repite o en análisis) SOLO si la dirección del colegio ya firmó la resolución del cierre de año. Si aún no está resuelta, dilo así: el colegio todavía no ha resuelto. Requiere el id de buscar_estudiantes. Para apoderados: solo sus pupilos.",
+    input_schema: {
+      type: "object",
+      properties: {
+        estudianteId: { type: "string", description: "Id del estudiante (de buscar_estudiantes)." },
+      },
+      required: ["estudianteId"],
+    },
+  },
+  {
     name: "ficha_estudiante",
     description:
       "Ficha académica mínima de un estudiante (curso, % de asistencia, promedio general, nº de anotaciones negativas). No incluye datos de salud, RUT ni contacto. Requiere el id obtenido de buscar_estudiantes.",
@@ -216,6 +228,8 @@ export async function ejecutarHerramienta(
       return anotacionesCurso(user, entrada);
     case "mensajes_sin_leer":
       return mensajesSinLeer(user);
+    case "situacion_final_anio":
+      return situacionFinalAnio(user, entrada);
     default:
       return { salida: { error: `Herramienta desconocida: ${nombre}` } };
   }
@@ -929,6 +943,71 @@ async function mensajesSinLeer(user: UsuarioIA): Promise<ResultadoHerramienta> {
         extracto: m.cuerpo.slice(0, 160),
       })),
       nota: "Responde desde el módulo Mensajes.",
+    },
+  };
+}
+
+// ── Situación final del año escolar (Decreto 67) ──────────────────────────
+
+/**
+ * Devuelve el resultado del año SOLO si existe la resolución firmada por
+ * dirección (art. 11). Nunca adelanta la propuesta del sistema: informar una
+ * decisión que el colegio aún no tomó sería peor que no responder.
+ */
+async function situacionFinalAnio(
+  user: UsuarioIA,
+  entrada: unknown
+): Promise<ResultadoHerramienta> {
+  const { estudianteId } = z.object({ estudianteId: z.string().min(1).max(40) }).parse(entrada);
+
+  const estudiante = await prisma.estudiante.findFirst({
+    where: { AND: [{ id: estudianteId }, alcanceEstudiantes(user)] },
+    select: { id: true, nombres: true, apellidos: true },
+  });
+  if (!estudiante) {
+    return { salida: { error: "No tienes acceso a ese estudiante o no existe." } };
+  }
+
+  const resolucion = await prisma.resolucionPromocion.findFirst({
+    where: { colegioId: user.colegioId, estudianteId },
+    orderBy: { resueltoEn: "desc" },
+    select: { estado: true, resueltoEn: true, anioEscolarId: true },
+  });
+  if (!resolucion) {
+    return {
+      salida: {
+        nombre: `${estudiante.apellidos}, ${estudiante.nombres}`,
+        resuelto: false,
+        mensaje:
+          "El colegio aún no ha resuelto la situación final de este estudiante. Cuando la dirección la firme, aparecerá aquí y en la ficha del estudiante.",
+      },
+    };
+  }
+  const anio = await prisma.anioEscolar.findUnique({
+    where: { id: resolucion.anioEscolarId },
+    select: { anio: true },
+  });
+
+  const etiqueta =
+    resolucion.estado === "PROMOVIDO"
+      ? "promovido(a)"
+      : resolucion.estado === "REPITE"
+        ? "repite el nivel"
+        : "en análisis caso a caso por el colegio";
+
+  return {
+    salida: {
+      nombre: `${estudiante.apellidos}, ${estudiante.nombres}`,
+      resuelto: true,
+      anio: anio?.anio ?? null,
+      situacion: etiqueta,
+      fecha: resolucion.resueltoEn.toISOString().slice(0, 10),
+      nota: "El fundamento completo de la resolución está en la ficha del estudiante.",
+    },
+    auditar: {
+      entidad: "Estudiante",
+      entidadId: estudiante.id,
+      meta: { herramienta: "situacion_final_anio" },
     },
   };
 }

@@ -19,6 +19,7 @@ import {
 } from "./actions";
 import { toast } from "@/components/ui/toast";
 import { confirmar } from "@/components/ui/confirmar";
+import { AnalisisEvaluacionIA } from "./analisis-evaluacion";
 
 type Estudiante = { id: string; nombre: string };
 type Evaluacion = {
@@ -93,6 +94,8 @@ export function Libreta({
   const [estados, setEstados] = useState<Record<string, EstadoCelda>>({});
   const [nuevaAbierta, setNuevaAbierta] = useState(false);
   const [colMenu, setColMenu] = useState<string | null>(null);
+  // Evaluación cuyo análisis con IA está abierto (panel en portal).
+  const [analizando, setAnalizando] = useState<{ id: string; nombre: string } | null>(null);
   const [puedeDeshacer, setPuedeDeshacer] = useState(false);
   // Retroalimentación IA por estudiante (borrador editable, no se guarda solo).
   const [retro, setRetro] = useState<{
@@ -556,6 +559,16 @@ export function Libreta({
                           </button>
                         </div>
                       </form>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setColMenu(null);
+                          setAnalizando({ id: ev.id, nombre: ev.nombre });
+                        }}
+                        className="mt-2 w-full rounded-lg border border-acento/40 bg-acento/10 px-2 py-1.5 text-xs font-semibold text-marca-700 transition-colors hover:bg-acento/20"
+                      >
+                        ✨ Analizar esta evaluación
+                      </button>
                     </div>
                   )}
                 </th>
@@ -810,6 +823,14 @@ export function Libreta({
             Cancelar
           </button>
         </form>
+      )}
+
+      {analizando && (
+        <AnalisisEvaluacionIA
+          evaluacionId={analizando.id}
+          nombreEvaluacion={analizando.nombre}
+          onCerrar={() => setAnalizando(null)}
+        />
       )}
     </div>
   );

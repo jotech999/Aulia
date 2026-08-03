@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   // Errores de tipos pendientes no bloquean el deploy (se corrigen en dev)
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  experimental: {
+    // Las fotos de pruebas en papel viajan por una server action. Ya se
+    // comprimen en el teléfono (~250 kB cada una), pero el tope de 1 MB por
+    // omisión rechazaría cuatro páginas seguidas.
+    serverActions: { bodySizeLimit: "8mb" },
+  },
   async redirects() {
     // Dominio canónico: cualquier visita al subdominio técnico de Render
     // (marcadores viejos, historial, PWA instalada) rebota a aulia.cl.

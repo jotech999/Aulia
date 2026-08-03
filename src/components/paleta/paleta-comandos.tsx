@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Iconos } from "@/components/ui/iconos";
 import { type Comando, comandosPara, normalizar } from "./comandos";
-import { buscarEstudiantes, type EstudianteBusqueda } from "./acciones";
+import { buscarEnColegio, type ResultadosBusqueda } from "./acciones";
 
 /**
  * Paleta de comandos (⌘K / Ctrl+K). Responde a la crítica de que "hay muchos
@@ -23,7 +23,7 @@ export function BotonPaleta({ compacto = false }: { compacto?: boolean }) {
       <button
         type="button"
         onClick={abrir}
-        aria-label="Buscar acción"
+        aria-label="Buscar"
         className="flex h-9 w-9 items-center justify-center rounded-lg text-tinta-suave transition-colors hover:bg-superficie-3"
       >
         <IconoBuscar />
@@ -37,7 +37,7 @@ export function BotonPaleta({ compacto = false }: { compacto?: boolean }) {
       className="flex w-full items-center gap-2 rounded-lg border border-borde bg-superficie-2 px-3 py-2 text-left text-sm text-tinta-tenue transition-colors hover:border-borde-fuerte hover:text-tinta-suave"
     >
       <IconoBuscar />
-      <span className="flex-1">Buscar acción…</span>
+      <span className="flex-1">Buscar en el colegio…</span>
       <kbd className="rounded border border-borde bg-superficie px-1.5 py-0.5 font-sans text-[10px] font-semibold text-tinta-tenue">
         ⌘K
       </kbd>
@@ -62,10 +62,17 @@ export function PaletaComandos({ rol }: { rol: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listaRef = useRef<HTMLDivElement>(null);
 
-  const [estudiantes, setEstudiantes] = useState<EstudianteBusqueda[]>([]);
-  // El staff docente/admin puede saltar a la ficha de un estudiante desde aquí.
-  const puedeBuscarEstudiantes =
-    rol !== "APODERADO" && rol !== "PIE" && rol !== "SOSTENEDOR";
+  const VACIO: ResultadosBusqueda = useMemo(
+    () => ({ estudiantes: [], cursos: [], apoderados: [] }),
+    []
+  );
+  const [dinamicos, setDinamicos] = useState<ResultadosBusqueda>(VACIO);
+  const [buscando, setBuscando] = useState(false);
+  // El staff docente/admin salta desde aquí a la ficha de un estudiante, a un
+  // curso o a una familia. El servidor vuelve a comprobar el alcance de cada
+  // rol; esto solo evita ir a preguntar cuando ya se sabe que no habrá nada.
+  const puedeBuscarEnColegio =
+    rol !== "APODERADO" && rol !== "ESTUDIANTE" && rol !== "SOSTENEDOR";
 
   const disponibles = useMemo(() => comandosPara(rol), [rol]);
 
@@ -78,36 +85,56 @@ export function PaletaComandos({ rol }: { rol: string }) {
     });
   }, [consulta, disponibles]);
 
-  // Búsqueda de estudiantes (con rebote): resultados dinámicos desde la BD.
+  // Búsqueda en la base (con rebote): estudiantes, cursos y apoderados.
   useEffect(() => {
-    if (!puedeBuscarEstudiantes || consulta.trim().length < 2) {
-      setEstudiantes([]);
+    if (!puedeBuscarEnColegio || consulta.trim().length < 2) {
+      setDinamicos(VACIO);
+      setBuscando(false);
       return;
     }
     let vigente = true;
+    setBuscando(true);
     const t = setTimeout(async () => {
       try {
-        const res = await buscarEstudiantes(consulta);
-        if (vigente) setEstudiantes(res);
+        const res = await buscarEnColegio(consulta);
+        if (vigente) setDinamicos(res);
       } catch {
-        if (vigente) setEstudiantes([]);
+        if (vigente) setDinamicos(VACIO);
+      } finally {
+        if (vigente) setBuscando(false);
       }
     }, 200);
     return () => {
       vigente = false;
       clearTimeout(t);
     };
-  }, [consulta, puedeBuscarEstudiantes]);
+  }, [consulta, puedeBuscarEnColegio, VACIO]);
 
   const resultados = useMemo<Comando[]>(() => {
-    const fichas: Comando[] = estudiantes.map((e) => ({
+    // Los cursos van primero: escribir "5b" tiene una intención muy concreta y
+    // no debería quedar sepultado bajo las secciones fijas que también encajan.
+    const cursos: Comando[] = dinamicos.cursos.map((c) => ({
+      grupo: "Cursos",
+      label: c.detalle ? `${c.nombre} — ${c.detalle}` : c.nombre,
+      // No existe una ficha de curso; el destino útil al escribir "5b" es
+      // abrirlo para pasar la lista, que es la acción diaria sobre un curso.
+      href: `/libro-clases/asistencia?cursoId=${c.id}`,
+      icono: "cursos",
+    }));
+    const fichas: Comando[] = dinamicos.estudiantes.map((e) => ({
       grupo: "Estudiantes",
       label: e.curso ? `${e.nombre} · ${e.curso}` : e.nombre,
       href: `/admin/estudiantes/${e.id}`,
       icono: "estudiantes",
     }));
-    return [...comandoResultados, ...fichas];
-  }, [comandoResultados, estudiantes]);
+    const familias: Comando[] = dinamicos.apoderados.map((a) => ({
+      grupo: "Apoderados",
+      label: a.detalle ? `${a.nombre} — ${a.detalle}` : a.nombre,
+      href: `/admin/personas?q=${encodeURIComponent(a.nombre)}`,
+      icono: "convivencia",
+    }));
+    return [...cursos, ...fichas, ...familias, ...comandoResultados];
+  }, [comandoResultados, dinamicos]);
 
   // Agrupar preservando el orden de aparición.
   const grupos = useMemo(() => {
@@ -118,7 +145,10 @@ export function PaletaComandos({ rol }: { rol: string }) {
     return [...m.entries()];
   }, [resultados]);
 
-  useEffect(() => setIndice(0), [consulta]);
+  // El índice vuelve al inicio tanto al teclear como cuando aterrizan los
+  // resultados de la base: esos se anteponen a la lista, y sin esto pulsar
+  // Enter justo en ese instante abría un elemento distinto del resaltado.
+  useEffect(() => setIndice(0), [consulta, dinamicos]);
 
   // Abrir con ⌘K / Ctrl+K y por evento del botón.
   useEffect(() => {
@@ -187,7 +217,7 @@ export function PaletaComandos({ rol }: { rol: string }) {
       />
       <div
         role="dialog"
-        aria-label="Buscar acción"
+        aria-label="Buscar en el colegio"
         className="animar-surgir relative w-full max-w-lg overflow-hidden rounded-xl border border-borde bg-superficie shadow-flotante"
         onKeyDown={onKeyLista}
       >
@@ -199,9 +229,9 @@ export function PaletaComandos({ rol }: { rol: string }) {
             ref={inputRef}
             value={consulta}
             onChange={(e) => setConsulta(e.target.value)}
-            placeholder="¿Qué quieres hacer? Ej: tomar asistencia, subir notas…"
+            placeholder="Busca una acción, un estudiante, un curso (5B) o un apoderado…"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-tinta-tenue"
-            aria-label="Buscar acción"
+            aria-label="Buscar en el colegio"
           />
           <kbd className="rounded border border-borde bg-superficie-2 px-1.5 py-0.5 text-[10px] font-semibold text-tinta-tenue">
             esc
@@ -211,7 +241,7 @@ export function PaletaComandos({ rol }: { rol: string }) {
         <div ref={listaRef} className="max-h-[60vh] overflow-y-auto p-2">
           {resultados.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-tinta-tenue">
-              Sin resultados para “{consulta}”.
+              {buscando ? "Buscando…" : `Sin resultados para “${consulta}”.`}
             </p>
           ) : (
             grupos.map(([grupo, items]) => (

@@ -9,9 +9,13 @@ import {
   guardarMaterialEnBanco,
   eliminarMaterialDelBanco,
   corregirConIA,
+  leerHojaDeRespuestas,
+  leerPruebaEnPapel,
 } from "./actions";
 import type { MaterialGenerado } from "@/lib/ia/material";
 import type { ResultadoCorreccion } from "@/lib/ia/correccion";
+import { TomarFotos } from "@/components/ia/tomar-fotos";
+import type { ImagenComprimida } from "@/lib/imagenes";
 
 type Opcion = { id: string; etiqueta: string };
 type MaterialBanco = {
@@ -63,6 +67,17 @@ export function AsistenteDocente({
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [respuestas, setRespuestas] = useState("");
+  // Lectura de la hoja en papel con la cámara.
+  const [fotos, setFotos] = useState<ImagenComprimida[]>([]);
+  const [leyendo, setLeyendo] = useState(false);
+  const [avisoFoto, setAvisoFoto] = useState<string | null>(null);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+  // Digitalizar una prueba antigua en papel para reutilizarla.
+  const [fotosPrueba, setFotosPrueba] = useState<ImagenComprimida[]>([]);
+  const [asignaturaPrueba, setAsignaturaPrueba] = useState("");
+  const [digitalizando, setDigitalizando] = useState(false);
+  const [avisoPrueba, setAvisoPrueba] = useState<string | null>(null);
+  const [errorPrueba, setErrorPrueba] = useState<string | null>(null);
   const [corrigiendo, setCorrigiendo] = useState(false);
   const [correccion, setCorreccion] = useState<Extract<ResultadoCorreccion, { ok: true }> | null>(null);
 
@@ -130,6 +145,77 @@ export function AsistenteDocente({
       return;
     }
     router.refresh();
+  }
+
+  /**
+   * Digitaliza una prueba que ya existe en papel y la deja como material
+   * editable: se puede imprimir, guardar en el banco o pasar a evaluación
+   * online sin volver a escribirla.
+   */
+  async function digitalizarPrueba() {
+    if (fotosPrueba.length === 0 || digitalizando) return;
+    const opcion = asignaturas.find((a) => a.id === asignaturaPrueba);
+    if (!opcion) {
+      setErrorPrueba("Elige a qué asignatura corresponde la prueba.");
+      return;
+    }
+    // La etiqueta viene como "5° Básico A · Matemática": el curso da el nivel.
+    const [cursoTexto, asignaturaTexto] = opcion.etiqueta.split("·").map((t) => t.trim());
+    setDigitalizando(true);
+    setErrorPrueba(null);
+    setAvisoPrueba(null);
+    try {
+      const res = await leerPruebaEnPapel({
+        imagenes: fotosPrueba.map((f) => ({ base64: f.base64, tipo: f.tipo })),
+        asignatura: asignaturaTexto || opcion.etiqueta,
+        nivel: cursoTexto || "—",
+      });
+      if (res.ok) {
+        setMaterial(res.material);
+        setAvisoPrueba(res.aviso);
+        setFotosPrueba([]);
+      } else {
+        setErrorPrueba(res.error);
+      }
+    } catch {
+      setErrorPrueba("No se pudo leer la prueba. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setDigitalizando(false);
+    }
+  }
+
+  /**
+   * Lee la hoja fotografiada y VUELCA la transcripción al cuadro de texto, sin
+   * corregir todavía. Ese paso intermedio es a propósito: la letra manuscrita
+   * se lee mal a veces y una transcripción equivocada no puede transformarse en
+   * una nota sin que nadie la haya mirado.
+   */
+  async function leerFotos() {
+    if (fotos.length === 0 || leyendo) return;
+    setLeyendo(true);
+    setErrorFoto(null);
+    setAvisoFoto(null);
+    try {
+      const res = await leerHojaDeRespuestas({
+        imagenes: fotos.map((f) => ({ base64: f.base64, tipo: f.tipo })),
+      });
+      if (res.ok) {
+        // Tope de 8000: es el máximo que acepta la corrección, y al fotografiar
+        // varias tandas seguidas el texto acumulado lo superaba y el envío se
+        // rechazaba sin explicar por qué.
+        setRespuestas((previo) =>
+          (previo.trim() ? `${previo.trim()}\n${res.texto}` : res.texto).slice(0, 8000)
+        );
+        setAvisoFoto(res.aviso);
+        setFotos([]);
+      } else {
+        setErrorFoto(res.error);
+      }
+    } catch {
+      setErrorFoto("No se pudo leer la foto. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setLeyendo(false);
+    }
   }
 
   async function corregir() {
@@ -462,6 +548,59 @@ export function AsistenteDocente({
         )}
       </div>
 
+      {/* Digitalizar una prueba que ya existe en papel */}
+      {tipo === "material" && (
+        <section className="mt-8 rounded-xl border border-borde bg-superficie p-4">
+          <h2 className="font-display text-base font-semibold tracking-tight text-tinta">
+            ¿Ya tienes la prueba en papel?
+          </h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-tinta-tenue">
+            Fotografíala y Aulia la deja escrita aquí: podrás imprimirla, guardarla en el banco del
+            colegio o corregirla con la cámara. Transcribe lo que hay en la hoja, sin inventar ni
+            corregir el enunciado.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,18rem)_1fr]">
+            <label className={etiqueta}>
+              ¿De qué asignatura es?
+              <select
+                value={asignaturaPrueba}
+                onChange={(e) => setAsignaturaPrueba(e.target.value)}
+                className={campo}
+              >
+                <option value="" disabled>
+                  Selecciona una asignatura…
+                </option>
+                {asignaturas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <TomarFotos
+                fotos={fotosPrueba}
+                onCambio={setFotosPrueba}
+                deshabilitado={digitalizando}
+                etiqueta="Fotografiar la prueba"
+              />
+              {fotosPrueba.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void digitalizarPrueba()}
+                  disabled={digitalizando || !asignaturaPrueba}
+                  className="mt-2 btn btn-primario"
+                >
+                  {digitalizando ? "Digitalizando…" : "Digitalizar la prueba"}
+                </button>
+              )}
+              {errorPrueba && <p className="mt-1.5 text-xs text-peligro">{errorPrueba}</p>}
+              {avisoPrueba && <p className="mt-1.5 text-xs text-alerta">{avisoPrueba}</p>}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Corrección asistida por IA: respuestas del estudiante vs. pauta */}
       {tipo === "material" && material && (
         <section className="mt-8 rounded-xl border border-borde bg-superficie p-4">
@@ -475,6 +614,36 @@ export function AsistenteDocente({
           </p>
           <div className="mt-3 grid gap-4 lg:grid-cols-2">
             <div className="flex flex-col gap-2">
+              <div className="rounded-lg border border-marca-200 bg-marca-50 p-3">
+                <p className="text-xs font-semibold text-marca-800">
+                  ¿La prueba está en papel? Sácale una foto.
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-marca-700">
+                  Aulia transcribe las respuestas al cuadro de abajo para que las revises antes de
+                  corregir. No transcribe el nombre ni el RUT del estudiante.
+                </p>
+                <div className="mt-2">
+                  <TomarFotos
+                    fotos={fotos}
+                    onCambio={setFotos}
+                    deshabilitado={leyendo}
+                    etiqueta="Fotografiar la hoja"
+                  />
+                </div>
+                {fotos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void leerFotos()}
+                    disabled={leyendo}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-marca-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-marca-700 disabled:opacity-60"
+                  >
+                    {leyendo ? "Leyendo la hoja…" : "Leer las respuestas de la foto"}
+                  </button>
+                )}
+                {errorFoto && <p className="mt-1.5 text-xs text-peligro">{errorFoto}</p>}
+                {avisoFoto && <p className="mt-1.5 text-xs text-alerta">{avisoFoto}</p>}
+              </div>
+
               <textarea
                 value={respuestas}
                 onChange={(e) => setRespuestas(e.target.value)}

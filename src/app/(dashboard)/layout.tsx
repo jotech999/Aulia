@@ -23,6 +23,8 @@ import { BotonCerrarSesion } from "@/components/boton-cerrar-sesion";
 import { MigracionClavesLocales } from "@/components/migracion-claves-locales";
 import { AccionesTopbar } from "@/components/ui/acciones-topbar";
 import { SplashEntrada } from "@/components/ui/splash-entrada";
+import { Latido } from "@/components/latido";
+import { PendientesEnvio } from "@/components/asistencia/pendientes-envio";
 
 async function cerrarSesion() {
   "use server";
@@ -40,6 +42,17 @@ function iniciales(nombre?: string | null) {
     .map((p) => p[0]?.toUpperCase())
     .join("");
 }
+
+/** Roles que pueden tener una lista pendiente de envío en su dispositivo. */
+const ROLES_TOMAN_ASISTENCIA = [
+  "ADMIN",
+  "DIRECTOR",
+  "UTP",
+  "PROFESOR_JEFE",
+  "PROFESOR",
+  "INSPECTOR",
+  "PIE",
+];
 
 const ROL_LEGIBLE: Record<string, string> = {
   ADMIN: "Administrador",
@@ -244,6 +257,15 @@ export default async function DashboardLayout({
       </div>
 
       <SplashEntrada />
+
+      {/* Mantiene el servicio despierto mientras hay alguien trabajando. */}
+      <Latido />
+
+      {/* Vigila las listas marcadas sin conexión desde cualquier pantalla, para
+          que ninguna asistencia se quede olvidada en el teléfono. */}
+      {ROLES_TOMAN_ASISTENCIA.includes(rol) && (
+        <PendientesEnvio contextoCola={`${sesion.user.colegioId}:${sesion.user.id}`} />
+      )}
 
       <PaletaComandos rol={rol} />
 

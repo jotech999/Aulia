@@ -11,6 +11,12 @@ import {
 } from "@/lib/ia/material";
 import { generarPdfMaterial } from "@/lib/pdf/material";
 import { corregirRespuestas, type ResultadoCorreccion } from "@/lib/ia/correccion";
+import {
+  transcribirInstrumento,
+  transcribirRespuestas,
+  type ResultadoInstrumento,
+  type ResultadoTranscripcion,
+} from "@/lib/ia/papel";
 
 // Solo staff docente/directivo genera borradores (no apoderado, no PIE acotado).
 const ROLES_DOCENTE = new Set(["ADMIN", "DIRECTOR", "UTP", "PROFESOR_JEFE", "PROFESOR", "INSPECTOR"]);
@@ -168,6 +174,60 @@ export async function corregirConIA(input: unknown): Promise<ResultadoCorreccion
     { id: user.id, rol: user.rol, colegioId: user.colegioId, nombre: user.name },
     parsed.data.material,
     parsed.data.respuestas
+  );
+}
+
+// ── La prueba en papel entra por la cámara ───────────────────────────────────
+// Las fotos NO se guardan: se procesan y se descartan. Al modelo se le pide
+// además que no transcriba identidades, y el resultado se vuelve a filtrar.
+
+const esquemaImagenes = z.object({
+  imagenes: z
+    .array(
+      z.object({
+        base64: z.string().min(100, "Foto vacía").max(7_000_000, "Foto demasiado pesada"),
+        tipo: z.enum(["image/jpeg", "image/png", "image/webp"]),
+      })
+    )
+    .min(1, "Adjunta al menos una foto")
+    .max(4, "Máximo 4 fotos por vez"),
+});
+
+const esquemaInstrumentoFoto = esquemaImagenes.extend({
+  asignatura: z.string().trim().min(2, "Indica la asignatura").max(80),
+  nivel: z.string().trim().min(1, "Indica el nivel").max(40),
+});
+
+/** Foto de la hoja de un estudiante → sus respuestas transcritas, sin identidad. */
+export async function leerHojaDeRespuestas(input: unknown): Promise<ResultadoTranscripcion> {
+  const parsed = esquemaImagenes.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const { user } = await requerirSesion();
+  if (!ROLES_DOCENTE.has(user.rol)) {
+    return { ok: false, error: "No tienes permiso para usar esta herramienta." };
+  }
+  return transcribirRespuestas(
+    { id: user.id, rol: user.rol, colegioId: user.colegioId, nombre: user.name },
+    parsed.data.imagenes
+  );
+}
+
+/** Foto de una prueba en papel → instrumento estructurado y reutilizable. */
+export async function leerPruebaEnPapel(input: unknown): Promise<ResultadoInstrumento> {
+  const parsed = esquemaInstrumentoFoto.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const { user } = await requerirSesion();
+  if (!ROLES_DOCENTE.has(user.rol)) {
+    return { ok: false, error: "No tienes permiso para usar esta herramienta." };
+  }
+  return transcribirInstrumento(
+    { id: user.id, rol: user.rol, colegioId: user.colegioId, nombre: user.name },
+    parsed.data.imagenes,
+    { asignatura: parsed.data.asignatura, nivel: parsed.data.nivel }
   );
 }
 

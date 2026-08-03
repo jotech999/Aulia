@@ -5,6 +5,8 @@ import { descifrarSeguro, cifradoDisponible } from "@/lib/cifrado";
 import { EncabezadoPagina } from "@/components/ui/encabezado-pagina";
 import { Iconos } from "@/components/ui/iconos";
 import { FormularioFicha, FormularioSesion } from "./formularios-cliente";
+import { ApoyoIaPie } from "./ia-cliente";
+import { iaDisponible } from "@/lib/ia/cliente";
 
 const fmtDia = (d: Date) =>
   new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }).format(d);
@@ -133,6 +135,16 @@ export default async function FichaPiePage({
               </ul>
             )}
           </section>
+
+          {/* Borradores del PACI y del informe a la familia. Solo si hay IA
+              configurada: sin ella el bloque no tendría nada que ofrecer. */}
+          {iaDisponible() && (
+            <ApoyoIaPie
+              estudianteId={estudiante.id}
+              diagnosticoInicial={diagnostico}
+              apoyosIniciales={ficha?.apoyos ?? ""}
+            />
+          )}
         </>
       )}
     </div>

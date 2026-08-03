@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation";
 import type { EstadoAsistencia } from "@/lib/asistencia";
 import { ESTADOS_ASISTENCIA } from "@/lib/asistencia";
 import { guardarAsistencia, guardarAsistenciaBloque } from "./actions";
+import {
+  borrar as borrarCola,
+  claveDe,
+  escribir as escribirCola,
+  HORAS_VIGENCIA,
+  leer as leerCola,
+  listarPendientes,
+  type PayloadCola,
+} from "@/lib/cola-asistencia";
 import { ESTADOS_UI, ORDEN_CICLO, siguienteEstado } from "./estados-ui";
 import { Boton } from "@/components/ui/boton";
 
@@ -16,19 +25,10 @@ type EstadoGuardado =
   | "offline"
   | "sincronizando"
   | "conflicto"
+  /** Lote guardado hace muchas horas: se conserva, pero conviene revisarlo. */
+  | "antiguo"
   | "error";
 type Marcas = Record<string, EstadoAsistencia>;
-type PayloadCola = {
-  cursoId: string;
-  bloqueHorarioId?: string;
-  fecha: string;
-  marcas: Array<{ estudianteId: string; estado: EstadoAsistencia }>;
-  clientMutationId: string;
-  capturadaEn: string;
-  versionBase: string;
-  versionDiariaBase?: string;
-  expiraEn: number;
-};
 
 export function RegistroAsistencia({
   cursoId,
@@ -75,8 +75,7 @@ export function RegistroAsistencia({
   const pintando = useRef(false);
   const versionRef = useRef(versionBase);
   const versionDiariaRef = useRef(versionDiariaBase);
-  const claveCola = `aulia:asistencia:cola:${contextoCola}:${cursoId}:${bloqueHorarioId ?? "diaria"}:${fecha}`;
-  const prefijoColas = `aulia:asistencia:cola:${contextoCola}:`;
+  const claveCola = claveDe(contextoCola, cursoId, bloqueHorarioId, fecha);
 
   function enviar(payload: PayloadCola) {
     return payload.bloqueHorarioId
@@ -87,28 +86,8 @@ export function RegistroAsistencia({
   // ── Cola offline PERSISTENTE ────────────────────────────────────────────────
   // localStorage (no sessionStorage): la lista marcada sin internet sobrevive a
   // cerrar la pestaña o el navegador, y se sincroniza sola al volver la señal.
-  // La clave no contiene nombres ni RUT (solo ids), y cada lote expira a las 12 h.
-  function leerCola(k: string): string | null {
-    try {
-      return localStorage.getItem(k);
-    } catch {
-      return null; // almacenamiento no disponible (modo privado estricto)
-    }
-  }
-  function escribirCola(k: string, v: string) {
-    try {
-      localStorage.setItem(k, v);
-    } catch {
-      /* sin almacenamiento: el estado "offline" igual avisa a la persona */
-    }
-  }
-  function borrarCola(k: string) {
-    try {
-      localStorage.removeItem(k);
-    } catch {
-      /* sin almacenamiento */
-    }
-  }
+  // El formato y las claves viven en `@/lib/cola-asistencia`, compartidos con el
+  // vigilante global que reintenta el envío desde cualquier pantalla.
 
   /**
    * Sincroniza TODOS los lotes pendientes de esta persona (otras fechas, otros
@@ -117,29 +96,17 @@ export function RegistroAsistencia({
    */
   async function sincronizarColasPendientes() {
     if (!navigator.onLine) return;
-    const claves: string[] = [];
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith(prefijoColas) && k !== claveCola) claves.push(k);
-      }
-    } catch {
-      return;
-    }
-    for (const k of claves) {
+    for (const lote of listarPendientes(contextoCola)) {
+      if (lote.clave === claveCola) continue;
       try {
-        const crudo = leerCola(k);
-        if (!crudo) continue;
-        const p = JSON.parse(crudo) as PayloadCola;
-        if (p.expiraEn < Date.now()) {
-          borrarCola(k);
-          continue;
-        }
-        const res = await enviar(p);
-        if (res.ok) borrarCola(k);
-        // Conflicto o error: el lote queda guardado para resolverlo en su página.
+        // Un lote vencido NO se descarta: la asistencia es registro legal y
+        // borrarla en silencio sería perder trabajo hecho. Se intenta igual y,
+        // si el servidor lo rechaza, queda visible en el aviso global.
+        const res = await enviar(lote.payload);
+        if (res.ok) borrarCola(lote.clave);
       } catch {
         // Red aún inestable: se reintentará en el próximo evento "online".
+        break;
       }
     }
   }
@@ -161,16 +128,14 @@ export function RegistroAsistencia({
 
   async function sincronizarCola() {
     if (!navigator.onLine) return;
-    const guardada = leerCola(claveCola);
-    if (!guardada) return;
+    const payload = leerCola(claveCola);
+    if (!payload) return;
     try {
-      const payload = JSON.parse(guardada) as PayloadCola;
-      if (payload.expiraEn < Date.now()) {
-        borrarCola(claveCola);
-        setGuardado("error");
-        return;
-      }
-      setGuardado("sincronizando");
+      // Un lote antiguo se avisa, pero NO se borra: quien marcó esa lista decide
+      // si la reenvía o la descarta, viéndola en pantalla.
+      const antiguo = payload.expiraEn < Date.now();
+      setGuardado(antiguo ? "antiguo" : "sincronizando");
+      if (antiguo) return;
       const res = await enviar(payload);
       if (res.ok) {
         versionRef.current = res.version;
@@ -229,11 +194,11 @@ export function RegistroAsistencia({
       capturadaEn: new Date().toISOString(),
       versionBase: versionRef.current,
       versionDiariaBase: versionDiariaRef.current,
-      expiraEn: Date.now() + 12 * 60 * 60 * 1000,
+      expiraEn: Date.now() + HORAS_VIGENCIA * 60 * 60 * 1000,
     };
 
     if (!navigator.onLine) {
-      escribirCola(claveCola, JSON.stringify(payload));
+      escribirCola(claveCola, payload);
       setGuardado("offline");
       return true;
     }
@@ -248,14 +213,14 @@ export function RegistroAsistencia({
         setGuardado("guardado");
         return true;
       } else if ("conflicto" in res && res.conflicto) {
-        escribirCola(claveCola, JSON.stringify(payload));
+        escribirCola(claveCola, payload);
         setGuardado("conflicto");
       } else {
-        escribirCola(claveCola, JSON.stringify(payload));
+        escribirCola(claveCola, payload);
         setGuardado("error");
       }
     } catch {
-      escribirCola(claveCola, JSON.stringify(payload));
+      escribirCola(claveCola, payload);
       setGuardado("offline");
       return true;
     }
@@ -350,6 +315,53 @@ export function RegistroAsistencia({
     // Para reemplazar una versión legal siempre se exige una nueva lectura. No
     // existe una vía cliente que quite versionBase y fuerce la sobrescritura.
     borrarCola(claveCola);
+    window.location.reload();
+  }
+
+  /**
+   * Intenta enviar un lote antiguo tal cual quedó guardado. Si el curso cambió
+   * mientras tanto, el servidor responderá conflicto y se cae al camino de
+   * siempre: recargar y decidir con la información a la vista.
+   */
+  async function enviarLoteAntiguo() {
+    const payload = leerCola(claveCola);
+    if (!payload) {
+      setGuardado("inactivo");
+      return;
+    }
+    setGuardado("sincronizando");
+    try {
+      const res = await enviar(payload);
+      if (res.ok) {
+        versionRef.current = res.version;
+        if (res.versionDiaria) versionDiariaRef.current = res.versionDiaria;
+        borrarCola(claveCola);
+        setGuardado("guardado");
+        router.refresh();
+      } else if ("conflicto" in res && res.conflicto) {
+        setGuardado("conflicto");
+      } else {
+        setGuardado("error");
+      }
+    } catch {
+      setGuardado("offline");
+    }
+  }
+
+  /**
+   * Descarta un lote pendiente. Es DESTRUCTIVO —esas marcas no llegaron nunca
+   * al servidor— así que exige una confirmación explícita y nunca ocurre como
+   * efecto secundario de otro botón. Antes, "Recargar y revisar" borraba la
+   * lista en silencio mientras el aviso decía que no se había borrado nada.
+   */
+  function descartarLoteAntiguo() {
+    const total = leerCola(claveCola)?.marcas.length ?? 0;
+    const seguro = window.confirm(
+      `Vas a descartar la lista guardada en este dispositivo (${total} estudiantes). Esas marcas no se han enviado y no se podrán recuperar. ¿Descartarla?`
+    );
+    if (!seguro) return;
+    borrarCola(claveCola);
+    setGuardado("inactivo");
     window.location.reload();
   }
 
@@ -612,7 +624,39 @@ export function RegistroAsistencia({
             {guardado === "conflicto" && (
               <span className="font-semibold text-alerta">Hay cambios más recientes</span>
             )}
-            {guardado === "error" && <span className="font-medium text-peligro">No se pudo guardar — reintenta</span>}
+            {guardado === "error" && leerCola(claveCola) && (
+          <div className="mx-auto mt-3 max-w-2xl rounded-xl bg-peligro-suave p-3 text-sm text-peligro">
+            <p>
+              La lista sigue guardada en este dispositivo, pero el colegio la está rechazando. Suele
+              pasar cuando el curso cambió después de marcarla (alguien se matriculó o se retiró):
+              en ese caso hay que volver a pasar la lista con la nómina actual.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void enviarLoteAntiguo()}
+                className="min-h-10 rounded-lg bg-peligro px-3 font-semibold text-white"
+              >
+                Reintentar
+              </button>
+              <button
+                type="button"
+                onClick={descartarLoteAntiguo}
+                className="min-h-10 rounded-lg border border-peligro/40 px-3 font-semibold text-peligro"
+              >
+                Descartarla y empezar de nuevo
+              </button>
+            </div>
+          </div>
+        )}
+        {guardado === "antiguo" && (
+              <span className="font-semibold text-alerta">
+                Lista guardada hace horas — revísala antes de enviar
+              </span>
+            )}
+            {guardado === "error" && (
+              <span className="font-medium text-peligro">No se pudo guardar — reintenta</span>
+            )}
           </span>
 
           <div className="flex items-center gap-2">
@@ -633,7 +677,7 @@ export function RegistroAsistencia({
               <button
                 type="button"
                 onClick={() => void guardarYSiguiente()}
-                disabled={guardado === "guardando" || guardado === "sincronizando" || guardado === "conflicto"}
+                disabled={guardado === "guardando" || guardado === "sincronizando" || guardado === "conflicto" || guardado === "antiguo"}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-marca-600 px-4 py-2 text-sm font-semibold text-white hover:bg-marca-700"
               >
                 Siguiente: {siguiente.nombre}
@@ -648,8 +692,43 @@ export function RegistroAsistencia({
         </div>
         {guardado === "conflicto" && (
           <div className="mx-auto mt-3 flex max-w-2xl flex-wrap items-center gap-2 rounded-xl bg-alerta-suave p-3 text-sm text-alerta">
-            <p className="mr-auto">Elige conscientemente qué versión conservar; no reintentaremos en forma automática.</p>
-            <button type="button" onClick={resolverConflicto} className="min-h-10 rounded-lg bg-alerta px-3 font-semibold text-white">Recargar y revisar</button>
+            <p className="mr-auto">
+              Alguien más guardó esta lista después que tú. Elige conscientemente qué versión
+              conservar; no reintentaremos en forma automática. Al recargar se descarta lo que
+              quedó pendiente en este dispositivo.
+            </p>
+            <button
+              type="button"
+              onClick={resolverConflicto}
+              className="min-h-10 rounded-lg bg-alerta px-3 font-semibold text-white"
+            >
+              Recargar y revisar
+            </button>
+          </div>
+        )}
+        {guardado === "antiguo" && (
+          <div className="mx-auto mt-3 max-w-2xl rounded-xl bg-alerta-suave p-3 text-sm text-alerta">
+            <p>
+              Esta lista quedó guardada en este dispositivo hace más de medio día y nunca se envió.
+              Sigue intacta: nada se ha borrado. Puedes enviarla tal cual, o descartarla si ya
+              registraste la asistencia de otra forma.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void enviarLoteAntiguo()}
+                className="min-h-10 rounded-lg bg-alerta px-3 font-semibold text-white"
+              >
+                Enviarla ahora
+              </button>
+              <button
+                type="button"
+                onClick={descartarLoteAntiguo}
+                className="min-h-10 rounded-lg border border-alerta/40 px-3 font-semibold text-alerta"
+              >
+                Descartarla
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -45,6 +45,10 @@ const GRUPOS_BASE: Grupo[] = [
     titulo: "Apoyo",
     items: [
       { href: "/pie", etiqueta: "PIE", icono: "convivencia", roles: PIE },
+      // Los docentes son quienes APLICAN las adecuaciones del Decreto 83, así que
+      // necesitan verlas. Es una vista distinta y acotada: sin diagnóstico y solo
+      // de los estudiantes de sus cursos (ver ROLES_APOYOS_AULA en lib/pie.ts).
+      { href: "/pie/apoyos", etiqueta: "Apoyos en mi sala", icono: "convivencia", roles: ["UTP", "PROFESOR_JEFE", "PROFESOR"] },
       { href: "/libro-clases/asistencia", etiqueta: "Asistencia de apoyos", icono: "asistencia", roles: ["PIE"] },
     ],
   },

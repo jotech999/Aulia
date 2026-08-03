@@ -52,6 +52,7 @@ export const COMANDOS: Comando[] = [
   { grupo: "Administración", label: "Centro de cumplimiento", href: "/admin/cumplimiento", icono: "escudo", claves: "ede auditoria respaldo privacidad estado", roles: ["ADMIN", "DIRECTOR", "UTP"] },
 
   { grupo: "Apoyo", label: "Registros PIE (Programa de Integración Escolar)", href: "/pie", icono: "convivencia", claves: "pie apoyo diagnostico integracion diferencial fonoaudiologo psicopedagogo", roles: ["ADMIN", "DIRECTOR", "PIE"] },
+  { grupo: "Apoyo", label: "Apoyos en mi sala (adecuaciones PIE)", href: "/pie/apoyos", icono: "convivencia", claves: "pie apoyo adecuacion adecuaciones decreto 83 paci inclusion diferencial sala aula", roles: ["ADMIN", "DIRECTOR", "PIE", "UTP", "PROFESOR_JEFE", "PROFESOR"] },
 
   // Visibles para todos (incluido el apoderado)
   { grupo: "Inicio", label: "Ir al inicio", href: "/dashboard", icono: "panel", claves: "inicio panel resumen home", roles: TODOS },

@@ -39,6 +39,7 @@ import { Certificados } from "./certificados-cliente";
 import { puedeVerEntrevistasDe } from "@/app/(dashboard)/convivencia/entrevistas/consultas";
 import { PortalEstudiante } from "./portal-estudiante";
 import { whereEstudiantesVisibles } from "@/lib/alcance-estudiantes";
+import { apoyosDeEstudiante } from "@/app/(dashboard)/pie/consultas-apoyos";
 import {
   descifrarDetalleJustificacion,
   descifrarFundamentoJustificacion,
@@ -122,6 +123,15 @@ export default async function FichaEstudiantePage({
         where: { estudianteId: estudiante.id, colegioId: user.colegioId, eliminadaEn: null },
       })) > 0
     : false;
+
+  /*
+   * Adecuaciones de aula: QUÉ hacer en clases con este estudiante. Es lo que el
+   * Decreto 83 le exige aplicar a quien hace la clase, así que aparece en la
+   * ficha, que es donde un profesor entra a mirar antes de una prueba. Nunca
+   * incluye el diagnóstico ni la bitácora de sesiones — ver
+   * `pie/consultas-apoyos.ts`, donde el `select` deja esos campos fuera.
+   */
+  const apoyosAula = await apoyosDeEstudiante(user, estudiante.id);
 
   const curso = estudiante.matriculas[0]?.curso;
   const accesoPortal = ["ADMIN", "DIRECTOR"].includes(user.rol)
@@ -339,7 +349,7 @@ export default async function FichaEstudiantePage({
             {participaPie && (
               <span
                 className="rounded-md bg-superficie-3 px-2 py-0.5 text-xs font-semibold text-tinta-suave"
-                title="Participa en el Programa de Integración Escolar. El detalle está reservado al equipo PIE y la dirección."
+                title="Participa en el Programa de Integración Escolar. Las adecuaciones de aula se muestran más abajo; el diagnóstico queda reservado al equipo PIE y la dirección."
               >
                 PIE
               </span>
@@ -352,6 +362,39 @@ export default async function FichaEstudiantePage({
       </header>
 
       <PortalEstudiante estudianteId={estudiante.id} correoActual={accesoPortal?.activo ? accesoPortal.usuario.email : null} puedeGestionar={["ADMIN", "DIRECTOR"].includes(user.rol)} />
+
+      {apoyosAula && (
+        <section
+          aria-labelledby="apoyos-aula"
+          className="mt-5 rounded-xl border border-marca-200 bg-marca-50 p-4"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 id="apoyos-aula" className="text-sm font-semibold text-marca-800">
+              Apoyos y adecuaciones en el aula
+            </h2>
+            <Link
+              href="/pie/apoyos"
+              data-noprint
+              className="text-xs font-semibold text-marca-700 underline"
+            >
+              Ver todos mis cursos
+            </Link>
+          </div>
+          {apoyosAula.apoyos ? (
+            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-tinta-suave">
+              {apoyosAula.apoyos}
+            </p>
+          ) : (
+            <p className="mt-1.5 text-sm leading-relaxed text-tinta-suave">
+              Participa del Programa de Integración Escolar, pero todavía no hay adecuaciones
+              escritas. Pídeselas al equipo PIE antes de la próxima evaluación.
+            </p>
+          )}
+          <p className="mt-2 text-[11px] leading-snug text-marca-700">
+            El diagnóstico no se muestra aquí: es información de salud y queda en el equipo PIE.
+          </p>
+        </section>
+      )}
 
       {/* Indicadores clave — sin scroll */}
       <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
